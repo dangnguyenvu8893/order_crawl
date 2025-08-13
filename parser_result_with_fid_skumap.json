@@ -1,0 +1,188 @@
+{
+  "status": "success",
+  "product": {
+    "name": "2024秋冬新款宽松灰色短款毛衣外套女装加厚拉链长袖针织开衫上衣",
+    "max_price": "25.00",
+    "images": [
+      {
+        "index": 0,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01pDbiiu1Jgbt6gXSQ6_!!2215995381058-0-cib.jpg",
+        "is_main": true
+      },
+      {
+        "index": 1,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01gqhXxj1Jgbt6v8IY6_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 2,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN012wknrh1Jgbt6dV0ba_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 3,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01y633IP1JnTpoTefJu_!!2202828491073-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 4,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01GyTd2f1Jgbt9M8GWC_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 5,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01AxbjxN1Jgbt6dV0ai_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 6,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01HRTwr41Jgbt6gUhvg_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 7,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01OdKTjZ1JgbtD6mytp_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 8,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01RsQ6rS1Jgbt8FpQc1_!!2215995381058-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 9,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01ChxTg91JnTpm4heE9_!!2202828491073-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 10,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN013nQSCT1JnTq6g19wb_!!2202828491073-0-cib.jpg",
+        "is_main": false
+      },
+      {
+        "index": 11,
+        "url": "https://cbu01.alicdn.com/img/ibank/O1CN01p19I5M1JnTqAKyY5w_!!2202828491073-0-cib.jpg",
+        "is_main": false
+      }
+    ],
+    "sku_properties": [
+      {
+        "property_name": "颜色",
+        "property_id": 3216,
+        "values": [
+          {
+            "name": "灰色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01AxbjxN1Jgbt6dV0ai_!!2215995381058-0-cib.jpg",
+            "vid": ""
+          },
+          {
+            "name": "桔红色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01HRTwr41Jgbt6gUhvg_!!2215995381058-0-cib.jpg",
+            "vid": ""
+          },
+          {
+            "name": "粉红色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01OdKTjZ1JgbtD6mytp_!!2215995381058-0-cib.jpg",
+            "vid": ""
+          },
+          {
+            "name": "天蓝色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01RsQ6rS1Jgbt8FpQc1_!!2215995381058-0-cib.jpg",
+            "vid": ""
+          },
+          {
+            "name": "红色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01ChxTg91JnTpm4heE9_!!2202828491073-0-cib.jpg",
+            "vid": ""
+          },
+          {
+            "name": "白色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN013nQSCT1JnTq6g19wb_!!2202828491073-0-cib.jpg",
+            "vid": ""
+          },
+          {
+            "name": "黑色",
+            "image_url": "https://cbu01.alicdn.com/img/ibank/O1CN01p19I5M1JnTqAKyY5w_!!2202828491073-0-cib.jpg",
+            "vid": ""
+          }
+        ]
+      },
+      {
+        "property_name": "尺码",
+        "property_id": 450,
+        "values": [
+          {
+            "name": "均码",
+            "image_url": "",
+            "vid": ""
+          }
+        ]
+      }
+    ],
+    "sku_map": [
+      {
+        "specId": "f238ef417b732888d336a1a0b696c96c",
+        "specAttrs": "粉红色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 1457,
+        "skuId": 5220324219598,
+        "isPromotionSku": false
+      },
+      {
+        "specId": "1b00696908568ef99f95283812b4090b",
+        "specAttrs": "桔红色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 4489,
+        "skuId": 5220324219597,
+        "isPromotionSku": false
+      },
+      {
+        "specId": "69725e1f0a17f9d0f02626717ad2a0be",
+        "specAttrs": "灰色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 8158,
+        "skuId": 5220324219595,
+        "isPromotionSku": false
+      },
+      {
+        "specId": "c0d4fddf9ee9e1e7411bb4e03fda988a",
+        "specAttrs": "天蓝色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 2118,
+        "skuId": 5220324219599,
+        "isPromotionSku": false
+      },
+      {
+        "specId": "bf9f947ce12b05d76a865ebd5b648464",
+        "specAttrs": "红色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 3987,
+        "skuId": 5220334883438,
+        "isPromotionSku": false
+      },
+      {
+        "specId": "9ce76d4e383faffd7829838ec03ad7c7",
+        "specAttrs": "白色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 3769,
+        "skuId": 5229741382081,
+        "isPromotionSku": false
+      },
+      {
+        "specId": "7ccb9e57d1d5f349172254f5c3eb0f3e",
+        "specAttrs": "黑色&gt;均码",
+        "saleCount": 0,
+        "canBookCount": 3766,
+        "skuId": 5229741382082,
+        "isPromotionSku": false
+      }
+    ]
+  },
+  "raw_data": {
+    "images_count": 12,
+    "sku_props_count": 2,
+    "has_name": true,
+    "has_price": true,
+    "has_sku_map": true
+  }
+}

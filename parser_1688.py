@@ -179,7 +179,7 @@ try {{
                 "offerMaxPrice": "result.data.mainPrice.fields.finalPriceModel.tradeWithoutPromotion.offerMaxPrice"
             }
             
-            # Trích xuất thông tin
+            # Trích xuất thông tin cơ bản
             product_info = {
                 "status": "success",
                 "parsed_data": {}
@@ -193,6 +193,23 @@ try {{
                     logger.info(f"Đã trích xuất {key}: {type(value).__name__}")
                 else:
                     logger.warning(f"Không tìm thấy dữ liệu cho {key} tại path: {path}")
+            
+            # Tìm kiếm skuMap ở nhiều vị trí khác nhau
+            sku_map_paths = [
+                "result.data.mainPrice.fields.finalPriceModel.tradeWithoutPromotion.skuMapOriginal",
+                "result.data.mainPrice.fields.finalPriceModel.tradeWithoutPromotion.skuMap",
+                "result.data.Root.fields.dataJson.skuModel.skuMap",
+                "result.data.mainPrice.fields.finalPriceModel.skuMap"
+            ]
+            
+            sku_map = None
+            for path in sku_map_paths:
+                sku_map = self.get_nested_value(context, path)
+                if sku_map is not None:
+                    logger.info(f"Đã tìm thấy skuMap tại path: {path}")
+                    break
+            
+            product_info["parsed_data"]["skuMap"] = sku_map
             
             # Thêm thông tin bổ sung
             product_info["parsed_data"]["raw_context_keys"] = list(context.keys()) if context else []
@@ -247,19 +264,111 @@ try {{
                 sku_props = []
                 prop_matches = re.findall(r'\{[^}]+\}', sku_str)
                 for prop_match in prop_matches:
-                    # Trích xuất tên property
+                    # Trích xuất tên property và fid
                     prop_name_match = re.search(r'"prop":"([^"]+)"', prop_match)
+                    fid_match = re.search(r'"fid":(\d+)', prop_match)
+                    
                     if prop_name_match:
                         prop_name = prop_name_match.group(1)
-                        # Trích xuất các giá trị
-                        values = re.findall(r'"name":"([^"]+)"', prop_match)
+                        fid = fid_match.group(1) if fid_match else ""
+                        
+                        # Trích xuất các giá trị với vid
+                        value_matches = re.findall(r'\{[^}]+\}', prop_match)
+                        values = []
+                        for value_match in value_matches:
+                            name_match = re.search(r'"name":"([^"]+)"', value_match)
+                            vid_match = re.search(r'"vid":(\d+)', value_match)
+                            image_match = re.search(r'"imageUrl":"([^"]*)"', value_match)
+                            
+                            if name_match:
+                                value = {
+                                    "name": name_match.group(1),
+                                    "vid": vid_match.group(1) if vid_match else "",
+                                    "image_url": image_match.group(1) if image_match else ""
+                                }
+                                values.append(value)
+                        
                         sku_props.append({
                             "property_name": prop_name,
-                            "values": [{"name": v} for v in values]
+                            "property_id": fid,
+                            "values": values
                         })
                 
                 result["parsed_data"]["skuProps"] = sku_props
                 logger.info(f"Đã trích xuất {len(sku_props)} SKU properties bằng regex")
+            
+            # Trích xuất SKU Map Original
+            sku_map_pattern = r'"skuMapOriginal":\[(.*?)\]'
+            sku_map_match = re.search(sku_map_pattern, html_content, re.DOTALL)
+            if sku_map_match:
+                sku_map_str = sku_map_match.group(1)
+                logger.info(f"Found skuMapOriginal string: {sku_map_str[:200]}...")
+                
+                # Parse SKU Map đơn giản
+                sku_map = []
+                # Tìm tất cả các object trong array
+                sku_entries = re.findall(r'\{[^}]+\}', sku_map_str)
+                logger.info(f"Found {len(sku_entries)} SKU entries")
+                
+                for entry in sku_entries:
+                    # Trích xuất thông tin cơ bản từ SKU Map entry
+                    sku_id_match = re.search(r'"skuId":(\d+)', entry)
+                    spec_attrs_match = re.search(r'"specAttrs":"([^"]+)"', entry)
+                    price_match = re.search(r'"price":"([^"]+)"', entry)
+                    can_book_count_match = re.search(r'"canBookCount":(\d+)', entry)
+                    sale_count_match = re.search(r'"saleCount":(\d+)', entry)
+                    spec_id_match = re.search(r'"specId":"([^"]+)"', entry)
+                    
+                    if sku_id_match:
+                        sku_entry = {
+                            "skuId": sku_id_match.group(1),
+                            "specAttrs": spec_attrs_match.group(1) if spec_attrs_match else "",
+                            "price": price_match.group(1) if price_match else "",
+                            "canBookCount": can_book_count_match.group(1) if can_book_count_match else "0",
+                            "saleCount": sale_count_match.group(1) if sale_count_match else "0",
+                            "specId": spec_id_match.group(1) if spec_id_match else ""
+                        }
+                        sku_map.append(sku_entry)
+                
+                result["parsed_data"]["skuMap"] = sku_map
+                logger.info(f"Đã trích xuất SKU Map Original với {len(sku_map)} entries bằng regex")
+            else:
+                # Thử tìm kiếm với pattern khác
+                logger.warning("Không tìm thấy skuMapOriginal với pattern đầu tiên, thử pattern khác...")
+                sku_map_pattern2 = r'skuMapOriginal":\[(.*?)\]'
+                sku_map_match2 = re.search(sku_map_pattern2, html_content, re.DOTALL)
+                if sku_map_match2:
+                    sku_map_str = sku_map_match2.group(1)
+                    logger.info(f"Found skuMapOriginal with pattern2: {sku_map_str[:200]}...")
+                    
+                    # Parse tương tự như trên
+                    sku_map = []
+                    sku_entries = re.findall(r'\{[^}]+\}', sku_map_str)
+                    logger.info(f"Found {len(sku_entries)} SKU entries with pattern2")
+                    
+                    for entry in sku_entries:
+                        sku_id_match = re.search(r'"skuId":(\d+)', entry)
+                        spec_attrs_match = re.search(r'"specAttrs":"([^"]+)"', entry)
+                        price_match = re.search(r'"price":"([^"]+)"', entry)
+                        can_book_count_match = re.search(r'"canBookCount":(\d+)', entry)
+                        sale_count_match = re.search(r'"saleCount":(\d+)', entry)
+                        spec_id_match = re.search(r'"specId":"([^"]+)"', entry)
+                        
+                        if sku_id_match:
+                            sku_entry = {
+                                "skuId": sku_id_match.group(1),
+                                "specAttrs": spec_attrs_match.group(1) if spec_attrs_match else "",
+                                "price": price_match.group(1) if price_match else "",
+                                "canBookCount": can_book_count_match.group(1) if can_book_count_match else "0",
+                                "saleCount": sale_count_match.group(1) if sale_count_match else "0",
+                                "specId": spec_id_match.group(1) if spec_id_match else ""
+                            }
+                            sku_map.append(sku_entry)
+                    
+                    result["parsed_data"]["skuMap"] = sku_map
+                    logger.info(f"Đã trích xuất SKU Map Original với {len(sku_map)} entries bằng pattern2")
+                else:
+                    logger.warning("Không tìm thấy skuMapOriginal trong HTML")
             
             return result
             
@@ -287,7 +396,8 @@ try {{
                 for value in prop.get("value", []):
                     sku_value = {
                         "name": value.get("name", ""),
-                        "image_url": value.get("imageUrl", "")
+                        "image_url": value.get("imageUrl", ""),
+                        "vid": value.get("vid", "")  # Thêm vid cho mỗi value
                     }
                     sku_info["values"].append(sku_value)
                 
@@ -338,13 +448,15 @@ try {{
                     "name": parsed_data.get("name", ""),
                     "max_price": parsed_data.get("offerMaxPrice", ""),
                     "images": self.parse_images(parsed_data.get("images", [])),
-                    "sku_properties": self.parse_sku_info(parsed_data.get("skuProps", []))
+                    "sku_properties": self.parse_sku_info(parsed_data.get("skuProps", [])),
+                    "sku_map": parsed_data.get("skuMap", {})
                 },
                 "raw_data": {
                     "images_count": len(parsed_data.get("images", [])),
                     "sku_props_count": len(parsed_data.get("skuProps", [])),
                     "has_name": bool(parsed_data.get("name")),
-                    "has_price": bool(parsed_data.get("offerMaxPrice"))
+                    "has_price": bool(parsed_data.get("offerMaxPrice")),
+                    "has_sku_map": bool(parsed_data.get("skuMap"))
                 }
             }
             
