@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     ca-certificates \
     fonts-liberation \
+    fonts-unifont \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -15,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libcups2 \
     libdbus-1-3 \
     libdrm2 \
+    libgdk-pixbuf-xlib-2.0-0 \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
@@ -34,11 +36,17 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Cài đặt Playwright browsers với root user
-RUN playwright install chromium
-RUN playwright install-deps
+RUN python -m playwright install chromium
 
-# Tạo user không phải root
-RUN groupadd -r playwright && useradd -r -g playwright playwright
+# Tạo user không phải root và thư mục home
+RUN groupadd -r playwright && useradd -r -g playwright -m -d /home/playwright playwright
+
+# Tạo thư mục cache cho playwright user
+RUN mkdir -p /home/playwright/.cache && chown -R playwright:playwright /home/playwright
+
+# Copy browser binaries từ root cache sang playwright user cache
+RUN cp -r /root/.cache/ms-playwright /home/playwright/.cache/ && \
+    chown -R playwright:playwright /home/playwright/.cache
 
 # Copy source code
 COPY . .

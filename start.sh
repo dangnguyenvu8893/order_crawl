@@ -37,7 +37,7 @@ for i in {1..6}; do
         echo "🌐 Service URL: http://localhost:5001"
         echo "📖 API Documentation:"
         echo "   - Health check: GET /health"
-        echo "   - Load page: POST /load-page"
+        
         echo "   - Load 1688 product: POST /load-1688-product"
         echo ""
         echo "📝 To view logs: docker-compose logs -f"

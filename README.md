@@ -47,22 +47,9 @@ GET /health
 ```
 Kiểm tra trạng thái service.
 
-### 2. Load trang bất kỳ
-```
-POST /load-page
-Content-Type: application/json
 
-{
-  "url": "https://detail.1688.com/offer/948998794646.html",
-  "wait_time": 15
-}
-```
 
-**Parameters:**
-- `url` (required): URL trang cần load
-- `wait_time` (optional): Thời gian chờ trang load (giây), mặc định 10s
-
-### 3. Load sản phẩm 1688.com
+### 2. Load sản phẩm 1688.com
 ```
 POST /load-1688-product
 Content-Type: application/json
@@ -84,14 +71,7 @@ Content-Type: application/json
 curl http://localhost:5000/health
 ```
 
-2. Load trang bất kỳ:
-```bash
-curl -X POST http://localhost:5000/load-page \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://detail.1688.com/offer/948998794646.html", "wait_time": 15}'
-```
-
-3. Load sản phẩm 1688:
+2. Load sản phẩm 1688:
 ```bash
 curl -X POST http://localhost:5000/load-1688-product \
   -H "Content-Type: application/json" \
@@ -112,9 +92,9 @@ response = requests.post(url, json=data)
 result = response.json()
 
 print(f"Status: {result['status']}")
-print(f"Title: {result['title']}")
-print(f"Prices: {result['prices']}")
-print(f"Images count: {result['images_count']}")
+print(f"Content length: {result['content_length']}")
+print(f"Product ID: {result['product_id']}")
+print(f"URL: {result['url']}")
 ```
 
 ## Cấu trúc Response
@@ -125,13 +105,9 @@ print(f"Images count: {result['images_count']}")
   "status": "success",
   "product_id": "948998794646",
   "url": "https://detail.1688.com/offer/948998794646.html",
-  "title": "Product Title",
-  "prices": ["¥10.00", "¥15.00"],
-  "descriptions": ["Product description"],
-  "images_count": 5,
-  "sample_images": ["image1.jpg", "image2.jpg"],
-  "content_length": 5000,
-  "sample_content": "Sample content...",
+  "content": "<!DOCTYPE html>...",
+  "content_length": 50000,
+  "cookies_used": 15,
   "timestamp": 1703123456.789
 }
 ```
@@ -175,3 +151,4 @@ docker logs -f 1688-selenium-service
 - Mỗi request tạo một Chrome instance mới
 - Tự động cleanup resources sau mỗi request
 - Health check để monitor service status
+

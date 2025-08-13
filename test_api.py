@@ -27,33 +27,7 @@ def test_health_check():
         print(f"❌ Health check error: {e}")
         return False
 
-def test_load_page():
-    """Test load page endpoint"""
-    print("\n🔍 Testing load page endpoint...")
-    try:
-        data = {
-            "url": TEST_URL,
-            "wait_time": 15
-        }
-        
-        print(f"   Loading URL: {TEST_URL}")
-        response = requests.post(f"{BASE_URL}/load-page", json=data)
-        
-        if response.status_code == 200:
-            result = response.json()
-            print("✅ Load page successful")
-            print(f"   Title: {result.get('title', 'N/A')}")
-            print(f"   Content length: {result.get('content_length', 'N/A')}")
-            print(f"   Links count: {result.get('links_count', 'N/A')}")
-            print(f"   Images count: {result.get('images_count', 'N/A')}")
-        else:
-            print(f"❌ Load page failed: {response.status_code}")
-            print(f"   Error: {response.text}")
-        
-        return response.status_code == 200
-    except Exception as e:
-        print(f"❌ Load page error: {e}")
-        return False
+
 
 def test_load_1688_product():
     """Test load 1688 product endpoint"""
@@ -69,11 +43,11 @@ def test_load_1688_product():
         if response.status_code == 200:
             result = response.json()
             print("✅ Load 1688 product successful")
-            print(f"   Title: {result.get('title', 'N/A')}")
-            print(f"   Prices: {result.get('prices', [])}")
-            print(f"   Descriptions: {result.get('descriptions', [])}")
-            print(f"   Images count: {result.get('images_count', 'N/A')}")
-            print(f"   Sample images: {result.get('sample_images', [])[:3]}")
+            print(f"   Status: {result.get('status', 'N/A')}")
+            print(f"   Content length: {result.get('content_length', 'N/A')}")
+            print(f"   Product ID: {result.get('product_id', 'N/A')}")
+            print(f"   URL: {result.get('url', 'N/A')}")
+            print(f"   Cookies used: {result.get('cookies_used', 'N/A')}")
         else:
             print(f"❌ Load 1688 product failed: {response.status_code}")
             print(f"   Error: {response.text}")
@@ -87,15 +61,7 @@ def test_invalid_requests():
     """Test invalid requests"""
     print("\n🔍 Testing invalid requests...")
     
-    # Test missing URL
-    try:
-        response = requests.post(f"{BASE_URL}/load-page", json={})
-        if response.status_code == 400:
-            print("✅ Missing URL validation passed")
-        else:
-            print(f"❌ Missing URL validation failed: {response.status_code}")
-    except Exception as e:
-        print(f"❌ Missing URL test error: {e}")
+
     
     # Test missing product ID
     try:
@@ -119,7 +85,6 @@ def main():
     # Run tests
     tests = [
         test_health_check,
-        test_load_page,
         test_load_1688_product,
         test_invalid_requests
     ]

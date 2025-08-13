@@ -1,11 +1,9 @@
 from flask import Flask, request, jsonify
 from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
 import time
 import logging
 import os
 import json
-import re
 import random
 import pickle
 
@@ -80,48 +78,6 @@ def generate_fake_cookies():
             'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
             'domain': '.1688.com',
             'path': '/'
-        },
-        {
-            'name': 'ali_apache_track',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
-        },
-        {
-            'name': 'ali_apache_tracktmp',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
-        },
-        {
-            'name': 'ali_apache_idtmp',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
-        },
-        {
-            'name': 'ali_apache_tracktmp',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
-        },
-        {
-            'name': 'ali_apache_idtmp',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
-        },
-        {
-            'name': 'ali_apache_tracktmp',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
-        },
-        {
-            'name': 'ali_apache_idtmp',
-            'value': f"{random.randint(1000000000, 9999999999)}.{int(time.time())}",
-            'domain': '.1688.com',
-            'path': '/'
         }
     ]
     
@@ -140,36 +96,37 @@ def generate_fake_cookies():
     return cookies
 
 def setup_browser():
-    """Thiết lập Playwright browser với cookie support"""
+    """Thiết lập Playwright browser"""
     try:
         playwright = sync_playwright().start()
         
+        # Cấu hình browser
+        browser_args = [
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--window-size=1920,1080',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-extensions',
+            '--disable-plugins',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate'
+        ]
+        
         browser = playwright.chromium.launch(
             headless=True,
-            args=[
-                '--no-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--window-size=1920,1080',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-extensions',
-                '--disable-plugins',
-                '--no-first-run',
-                '--no-default-browser-check',
-                '--disable-default-apps',
-                '--disable-sync',
-                '--disable-translate',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor'
-            ]
+            args=browser_args
         )
         return playwright, browser
     except Exception as e:
         logger.error(f"Lỗi khi khởi tạo browser: {e}")
         return None, None
 
-def create_cookie_context(browser, use_saved_cookies=True):
-    """Tạo context với cookies"""
+def create_stealth_context(browser, use_saved_cookies=True):
+    """Tạo context với stealth mode"""
     # Load cookies đã lưu hoặc tạo mới
     if use_saved_cookies:
         cookies = load_cookies()
@@ -179,7 +136,7 @@ def create_cookie_context(browser, use_saved_cookies=True):
     else:
         cookies = generate_fake_cookies()
     
-    # Tạo context với cookies
+    # Tạo context với stealth mode
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         viewport={'width': 1920, 'height': 1080},
@@ -207,8 +164,9 @@ def create_cookie_context(browser, use_saved_cookies=True):
         except Exception as e:
             logger.warning(f"Không thể thêm cookie {cookie['name']}: {e}")
     
-    # Thêm stealth script
+    # Thêm stealth script nâng cao
     context.add_init_script("""
+        // Override webdriver property
         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
         Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
         Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh', 'en'] });
@@ -217,24 +175,139 @@ def create_cookie_context(browser, use_saved_cookies=True):
         Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
         window.chrome = { runtime: {} };
         
-        // Override localStorage và sessionStorage
+        // Override canvas fingerprinting
+        const originalGetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+            const context = originalGetContext.call(this, type, ...args);
+            if (type === '2d') {
+                const originalFillText = context.fillText;
+                context.fillText = function(...args) {
+                    return originalFillText.apply(this, args);
+                };
+            }
+            return context;
+        };
+        
+        // Override WebGL fingerprinting
+        const getParameter = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function(parameter) {
+            if (parameter === 37445) {
+                return 'Intel Inc.';
+            }
+            if (parameter === 37446) {
+                return 'Intel(R) Iris(TM) Graphics 6100';
+            }
+            return getParameter.call(this, parameter);
+        };
+        
+        // Override Audio fingerprinting
+        if (window.AudioContext || window.webkitAudioContext) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const originalGetChannelData = AudioContext.prototype.getChannelData;
+            AudioContext.prototype.getChannelData = function(...args) {
+                const channelData = originalGetChannelData.apply(this, args);
+                return channelData;
+            };
+        }
+        
+        // Override permissions
+        const originalQuery = navigator.permissions.query;
+        navigator.permissions.query = function(parameters) {
+            return Promise.resolve({ state: 'granted' });
+        };
+        
+        // Override service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register = function() {
+                return Promise.resolve({});
+            };
+        }
+        
+        // Override battery API
+        if ('getBattery' in navigator) {
+            navigator.getBattery = function() {
+                return Promise.resolve({
+                    charging: true,
+                    chargingTime: Infinity,
+                    dischargingTime: Infinity,
+                    level: 0.85
+                });
+            };
+        }
+        
+        // Override connection API
+        if ('connection' in navigator) {
+            Object.defineProperty(navigator, 'connection', {
+                get: () => ({
+                    effectiveType: '4g',
+                    rtt: 50,
+                    downlink: 10,
+                    saveData: false
+                })
+            });
+        }
+        
+        // Override geolocation
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition = function(success) {
+                success({
+                    coords: {
+                        latitude: 39.9042,
+                        longitude: 116.4074,
+                        accuracy: 100
+                    }
+                });
+            };
+        }
+        
+        // Override timezone
+        const originalDateTimeFormat = Intl.DateTimeFormat;
+        Intl.DateTimeFormat = function(...args) {
+            if (args.length === 0) {
+                args = ['zh-CN', { timeZone: 'Asia/Shanghai' }];
+            }
+            return new originalDateTimeFormat(...args);
+        };
+        
+        // Override performance timing
+        if (window.performance && window.performance.timing) {
+            const timing = window.performance.timing;
+            timing.navigationStart = Date.now() - Math.random() * 1000;
+        }
+        
+        // Override console methods
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('webdriver')) {
+                return;
+            }
+            return originalLog.apply(this, args);
+        };
+        
+        console.warn = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('webdriver')) {
+                return;
+            }
+            return originalWarn.apply(this, args);
+        };
+        
+        console.error = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('webdriver')) {
+                return;
+            }
+            return originalError.apply(this, args);
+        };
+        
+        // Override localStorage and sessionStorage
         const originalSetItem = Storage.prototype.setItem;
         Storage.prototype.setItem = function(key, value) {
-            if (key.includes('bot') || key.includes('captcha')) {
+            if (key.includes('webdriver') || key.includes('bot')) {
                 return;
             }
             return originalSetItem.call(this, key, value);
-        };
-        
-        // Override fetch để thêm headers
-        const originalFetch = window.fetch;
-        window.fetch = function(url, options = {}) {
-            if (!options.headers) {
-                options.headers = {};
-            }
-            options.headers['X-Requested-With'] = 'XMLHttpRequest';
-            options.headers['X-Forwarded-For'] = '127.0.0.1';
-            return originalFetch.call(this, url, options);
         };
     """)
     
@@ -247,8 +320,8 @@ def create_session_and_cookies():
         if not browser:
             return None, None, None
         
-        # Tạo context với cookies
-        context = create_cookie_context(browser, use_saved_cookies=False)
+        # Tạo context với stealth mode
+        context = create_stealth_context(browser, use_saved_cookies=False)
         page = context.new_page()
         
         # Truy cập trang chủ 1688.com để tạo session
@@ -285,130 +358,22 @@ def create_session_and_cookies():
             playwright.stop()
         return None, None, None
 
-def extract_1688_data(page_content):
-    """Trích xuất dữ liệu từ trang 1688.com"""
+def get_page_content(page_content):
+    """Lấy nội dung trang web"""
     try:
-        soup = BeautifulSoup(page_content, 'html.parser')
-        
-        # Tìm script chứa dữ liệu sản phẩm
-        scripts = soup.find_all('script')
-        product_data = None
-        
-        for script in scripts:
-            if script.string and 'window.context' in script.string:
-                script_content = script.string
-                match = re.search(r'window\.context\s*=\s*({.*?});', script_content, re.DOTALL)
-                if match:
-                    try:
-                        json_str = match.group(1)
-                        data = json.loads(json_str)
-                        if 'result' in data and 'data' in data['result']:
-                            product_data = data['result']['data']
-                            break
-                    except json.JSONDecodeError:
-                        continue
-        
-        if product_data:
-            result = {
-                "status": "success",
-                "extracted_data": True,
-                "product_info": {}
-            }
-            
-            # Thông tin cơ bản
-            if 'productTitle' in product_data:
-                title_data = product_data['productTitle']['fields']
-                result["product_info"]["title"] = title_data.get('title', '')
-                result["product_info"]["sale_count"] = title_data.get('saleNum', '')
-                result["product_info"]["unit"] = title_data.get('unit', '')
-            
-            # Thông tin giá
-            if 'mainPrice' in product_data:
-                price_data = product_data['mainPrice']['fields']
-                if 'priceModel' in price_data:
-                    price_model = price_data['priceModel']
-                    result["product_info"]["price_range"] = price_model.get('priceDisplay', '')
-                    result["product_info"]["current_prices"] = price_model.get('currentPrices', [])
-            
-            # Thông tin hình ảnh
-            if 'gallery' in product_data:
-                gallery_data = product_data['gallery']['fields']
-                result["product_info"]["images"] = gallery_data.get('offerImgList', [])
-                result["product_info"]["subject"] = gallery_data.get('subject', '')
-            
-            # Thông tin SKU
-            if 'skuSelection' in product_data:
-                sku_data = product_data['skuSelection']['fields']
-                result["product_info"]["sku_info"] = sku_data
-            
-            # Thông tin vận chuyển
-            if 'shippingServices' in product_data:
-                shipping_data = product_data['shippingServices']['fields']
-                result["product_info"]["shipping"] = {
-                    "delivery_fee": shipping_data.get('deliveryFee', ''),
-                    "location": shipping_data.get('location', ''),
-                    "delivery_limit": shipping_data.get('deliveryLimitText', '')
-                }
-            
-            # Thông tin bảo vệ người mua
-            if 'mainServices' in product_data:
-                services_data = product_data['mainServices']['fields']
-                result["product_info"]["buyer_protection"] = services_data.get('guaranteeList', [])
-            
-            # Thông tin chi tiết sản phẩm
-            if 'detailDescription' in product_data:
-                detail_data = product_data['detailDescription']
-                result["product_info"]["detail"] = {
-                    "brand": detail_data.get('texts', {}).get('brandName', ''),
-                    "category": detail_data.get('leafCategoryName', ''),
-                    "company": detail_data.get('sellerModel', {}).get('companyName', ''),
-                    "feature_attributes": detail_data.get('featureAttributes', [])
-                }
-            
-            return result
-        else:
-            return extract_from_html(soup)
-            
-    except Exception as e:
-        logger.error(f"Lỗi khi trích xuất dữ liệu: {e}")
-        return {"status": "error", "message": str(e)}
-
-def extract_from_html(soup):
-    """Trích xuất dữ liệu từ HTML khi không có script data"""
-    try:
-        result = {
+        return {
             "status": "success",
-            "extracted_data": False,
-            "html_data": {}
+            "content": page_content,
+            "content_length": len(page_content)
         }
-        
-        # Tìm title
-        title = soup.find('title')
-        if title:
-            result["html_data"]["title"] = title.get_text().strip()
-        
-        # Tìm tất cả text content
-        text_content = soup.get_text(separator=' ', strip=True)
-        result["html_data"]["content"] = text_content[:2000] + "..." if len(text_content) > 2000 else text_content
-        
-        # Tìm tất cả links
-        links = [a.get('href') for a in soup.find_all('a', href=True)]
-        result["html_data"]["links"] = links[:20]
-        
-        # Tìm tất cả images
-        images = [img.get('src') for img in soup.find_all('img', src=True)]
-        result["html_data"]["images"] = images[:20]
-        
-        return result
-        
     except Exception as e:
-        logger.error(f"Lỗi khi trích xuất từ HTML: {e}")
+        logger.error(f"Lỗi khi lấy nội dung trang: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "message": "Cookie-based Stealth Playwright service is running"})
+    return jsonify({"status": "healthy", "message": "Stealth Playwright service is running"})
 
 @app.route('/create-session', methods=['POST'])
 def create_new_session():
@@ -447,7 +412,7 @@ def create_new_session():
 
 @app.route('/load-1688-product', methods=['POST'])
 def load_1688_product():
-    """API endpoint để load sản phẩm 1688.com với cookie rotation"""
+    """API endpoint để load sản phẩm 1688.com"""
     try:
         data = request.get_json()
         if not data or 'product_id' not in data:
@@ -457,7 +422,7 @@ def load_1688_product():
         url = f"https://detail.1688.com/offer/{product_id}.html"
         use_saved_cookies = data.get('use_saved_cookies', True)
         
-        logger.info(f"Bắt đầu load sản phẩm 1688 với cookie rotation: {product_id}")
+        logger.info(f"Bắt đầu load sản phẩm 1688: {product_id}")
         
         # Khởi tạo browser
         playwright, browser = setup_browser()
@@ -465,11 +430,11 @@ def load_1688_product():
             return jsonify({"error": "Không thể khởi tạo browser"}), 500
         
         try:
-            # Tạo context với cookies
-            context = create_cookie_context(browser, use_saved_cookies=use_saved_cookies)
+            # Tạo context với stealth mode
+            context = create_stealth_context(browser, use_saved_cookies=use_saved_cookies)
             page = context.new_page()
             
-            # Load trang với cookie rotation
+            # Load trang
             page.goto(url, wait_until='domcontentloaded', timeout=60000)
             logger.info(f"Đã load trang sản phẩm thành công: {url}")
             
@@ -488,8 +453,8 @@ def load_1688_product():
             # Lấy page content
             page_content = page.content()
             
-            # Trích xuất dữ liệu
-            result = extract_1688_data(page_content)
+            # Lấy nội dung trang
+            result = get_page_content(page_content)
             result["product_id"] = product_id
             result["url"] = url
             result["timestamp"] = time.time()
@@ -530,4 +495,4 @@ def get_cookies_info():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
