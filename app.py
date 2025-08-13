@@ -6,6 +6,7 @@ import os
 import json
 import random
 import pickle
+from parser_1688 import parser_1688
 
 app = Flask(__name__)
 
@@ -359,15 +360,14 @@ def create_session_and_cookies():
         return None, None, None
 
 def get_page_content(page_content):
-    """Lấy nội dung trang web"""
+    """Lấy thông tin cơ bản về trang web"""
     try:
         return {
             "status": "success",
-            "content": page_content,
             "content_length": len(page_content)
         }
     except Exception as e:
-        logger.error(f"Lỗi khi lấy nội dung trang: {e}")
+        logger.error(f"Lỗi khi lấy thông tin trang: {e}")
         return {"status": "error", "message": str(e)}
 
 @app.route('/health', methods=['GET'])
@@ -453,12 +453,21 @@ def load_1688_product():
             # Lấy page content
             page_content = page.content()
             
-            # Lấy nội dung trang
+            # Parse thông tin sản phẩm từ HTML
+            logger.info(f"Bắt đầu parse thông tin sản phẩm: {product_id}")
+            parsed_product = parser_1688.get_formatted_product_info(page_content)
+            
+            # Lấy nội dung trang cơ bản
             result = get_page_content(page_content)
             result["product_id"] = product_id
+            result["sourceId"] = product_id
+            result["sourceType"] = "1688"
             result["url"] = url
             result["timestamp"] = time.time()
             result["cookies_used"] = len(context.cookies())
+            
+            # Thêm thông tin sản phẩm đã parse
+            result["parsed_product"] = parsed_product
             
             logger.info(f"Load sản phẩm 1688 thành công: {product_id}")
             return jsonify(result)
@@ -493,6 +502,8 @@ def get_cookies_info():
     except Exception as e:
         logger.error(f"Lỗi khi lấy thông tin cookies: {e}")
         return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
