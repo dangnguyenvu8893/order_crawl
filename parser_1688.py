@@ -14,10 +14,50 @@ class Product1688Parser:
             'window_context_function': r'window\.context\s*=\s*\(function\([^)]*\)\s*{.*?}\s*\)\s*\([^)]*,\s*({.*?})\);',
             'window_context_complex': r'window\.context\s*=\s*\(function\([^)]*\)\s*{.*?}\s*\)\s*\([^)]*,\s*({.*?})\);'
         }
+        # Regex đa dòng để bắt object context truyền vào function
+        self.context_full_regex = re.compile(
+            r"window\\.context\\s*=\\s*\\(function\\([^)]*\\)\\s*{[\\s\\S]*?}\\s*\\)\\s*\\([^,]+,\\s*({[\\s\\S]*?})\\s*\\);",
+            re.DOTALL
+        )
     
     def extract_window_context(self, html_content: str) -> Optional[Dict]:
         """Trích xuất window.context object từ HTML content"""
         try:
+            # Thử bắt theo regex đa dòng trước
+            try:
+                m = self.context_full_regex.search(html_content)
+                if m:
+                    json_str = m.group(1)
+                    try:
+                        return json.loads(json_str)
+                    except json.JSONDecodeError:
+                        # Thử dùng Node để eval object literal
+                        try:
+                            import subprocess
+                            import tempfile
+                            import os
+                            with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False, encoding='utf-8') as f:
+                                f.write(f'''
+try {{
+  const data = {json_str};
+  console.log(JSON.stringify(data));
+}} catch (e) {{
+  console.error("Error:" + e.message);
+  process.exit(1);
+}}
+''')
+                                temp_file = f.name
+                            result = subprocess.run(['node', temp_file], capture_output=True, text=True, timeout=10)
+                            os.unlink(temp_file)
+                            if result.returncode == 0:
+                                return json.loads(result.stdout.strip())
+                            else:
+                                logger.error(f"JavaScript parse error: {result.stderr}")
+                        except Exception as e:
+                            logger.debug(f"Node eval failed: {e}")
+            except Exception as e:
+                logger.debug(f"Regex đa dòng không parse được: {e}")
+
             # Tìm dòng chứa window.context
             lines = html_content.split('\n')
             context_line = None
@@ -111,7 +151,7 @@ class Product1688Parser:
                         import os
                         
                         # Tạo file JavaScript tạm thời
-                        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+                        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False, encoding='utf-8') as f:
                             f.write(f'''
 const fs = require('fs');
 try {{
@@ -176,7 +216,8 @@ try {{
                 "images": "result.data.gallery.fields.offerImgList",
                 "name": "result.data.Root.fields.dataJson.tempModel.offerTitle",
                 "skuProps": "result.data.Root.fields.dataJson.skuModel.skuProps",
-                "offerMaxPrice": "result.data.mainPrice.fields.finalPriceModel.tradeWithoutPromotion.offerMaxPrice"
+                "offerMaxPrice": "result.data.mainPrice.fields.finalPriceModel.tradeWithoutPromotion.offerMaxPrice",
+                "offerPriceRanges": "result.data.mainPrice.fields.finalPriceModel.tradeWithoutPromotion.offerPriceRanges"
             }
             
             # Trích xuất thông tin cơ bản
@@ -251,9 +292,31 @@ try {{
             if images_match:
                 images_str = images_match.group(1)
                 # Tách các URL ảnh
-                image_urls = re.findall(r'"([^"]+)"', images_str)
+                image_urls = re.findall(r'"([^\"]+)"', images_str)
                 result["parsed_data"]["images"] = image_urls
                 logger.info(f"Đã trích xuất {len(image_urls)} ảnh bằng regex")
+            
+            # Trích xuất offerPriceRanges (fallback nếu không parse được context)
+            ranges_pattern = r'"offerPriceRanges"\s*:\s*\[(.*?)\]'
+            ranges_match = re.search(ranges_pattern, html_content, re.DOTALL)
+            if ranges_match:
+                ranges_str = ranges_match.group(1)
+                # Tách các object trong mảng
+                raw_objs = re.findall(r'\{[^\}]*\}', ranges_str)
+                offer_ranges = []
+                for obj in raw_objs:
+                    price_match = re.search(r'"price"\s*:\s*"([^"]+)"', obj)
+                    discount_match = re.search(r'"discountPrice"\s*:\s*"([^"]+)"', obj)
+                    begin_match = re.search(r'"beginAmount"\s*:\s*(\d+)', obj)
+                    end_match = re.search(r'"endAmount"\s*:\s*(\d+)', obj)
+                    offer_ranges.append({
+                        "price": price_match.group(1) if price_match else "",
+                        "beginAmount": int(begin_match.group(1)) if begin_match else 0,
+                        "discountPrice": discount_match.group(1) if discount_match else "",
+                        "endAmount": int(end_match.group(1)) if end_match else 0,
+                    })
+                result["parsed_data"]["offerPriceRanges"] = offer_ranges
+                logger.info(f"Đã trích xuất offerPriceRanges bằng regex: {len(offer_ranges)} mức")
             
             # Trích xuất SKU properties
             sku_pattern = r'"skuProps":\[(.*?)\]'
@@ -262,7 +325,7 @@ try {{
                 sku_str = sku_match.group(1)
                 # Parse SKU properties đơn giản
                 sku_props = []
-                prop_matches = re.findall(r'\{[^}]+\}', sku_str)
+                prop_matches = re.findall(r'\{[^\}]+\}', sku_str)
                 for prop_match in prop_matches:
                     # Trích xuất tên property và fid
                     prop_name_match = re.search(r'"prop":"([^"]+)"', prop_match)
@@ -273,12 +336,12 @@ try {{
                         fid = fid_match.group(1) if fid_match else ""
                         
                         # Trích xuất các giá trị với vid
-                        value_matches = re.findall(r'\{[^}]+\}', prop_match)
+                        value_matches = re.findall(r'\{[^\}]+\}', prop_match)
                         values = []
                         for value_match in value_matches:
                             name_match = re.search(r'"name":"([^"]+)"', value_match)
                             vid_match = re.search(r'"vid":(\d+)', value_match)
-                            image_match = re.search(r'"imageUrl":"([^"]*)"', value_match)
+                            image_match = re.search(r'"imageUrl":"([^\"]*)"', value_match)
                             
                             if name_match:
                                 value = {
@@ -449,7 +512,8 @@ try {{
                     "max_price": parsed_data.get("offerMaxPrice", ""),
                     "images": self.parse_images(parsed_data.get("images", [])),
                     "sku_properties": self.parse_sku_info(parsed_data.get("skuProps", [])),
-                    "sku_map": parsed_data.get("skuMap", {})
+                    "sku_map": parsed_data.get("skuMap", {}),
+                    "offer_price_ranges": parsed_data.get("offerPriceRanges", [])
                 },
                 "raw_data": {
                     "images_count": len(parsed_data.get("images", [])),
