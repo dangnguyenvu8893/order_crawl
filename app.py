@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flasgger import Swagger, swag_from
 from playwright.sync_api import sync_playwright
 import time
 import logging
@@ -9,6 +10,20 @@ import pickle
 from parser_1688 import parser_1688
 
 app = Flask(__name__)
+# Cấu hình Swagger: tắt nút "Try it out" bằng cách vô hiệu hoá submit methods
+app.config['SWAGGER'] = {
+    'uiversion': 3,
+    'swagger_ui': True,
+    # Bật Try it out mặc định và cho phép chỉnh input/submit ngay
+    'swagger_ui_config': {
+        'supportedSubmitMethods': ['get', 'post', 'put', 'delete', 'patch', 'options', 'head'],
+        'tryItOutEnabled': True,
+        'persistAuthorization': True,
+        'defaultModelsExpandDepth': -1,
+        'displayOperationId': True
+    }
+}
+swagger = Swagger(app)
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
@@ -59,7 +74,7 @@ def save_sessions(sessions):
 def generate_fake_cookies():
     """Tạo fake cookies để bypass anti-bot"""
     cookies = []
-    
+
     # Cookie cơ bản cho 1688.com
     base_cookies = [
         {
@@ -81,7 +96,7 @@ def generate_fake_cookies():
             'path': '/'
         }
     ]
-    
+
     # Thêm cookies ngẫu nhiên
     for i in range(random.randint(5, 15)):
         cookie_name = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=random.randint(8, 15)))
@@ -92,7 +107,7 @@ def generate_fake_cookies():
             'domain': '.1688.com',
             'path': '/'
         })
-    
+
     cookies.extend(base_cookies)
     return cookies
 
@@ -100,7 +115,7 @@ def setup_browser():
     """Thiết lập Playwright browser"""
     try:
         playwright = sync_playwright().start()
-        
+
         # Cấu hình browser
         browser_args = [
             '--no-sandbox',
@@ -116,7 +131,7 @@ def setup_browser():
             '--disable-sync',
             '--disable-translate'
         ]
-        
+
         browser = playwright.chromium.launch(
             headless=True,
             args=browser_args
@@ -136,7 +151,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
             save_cookies(cookies)
     else:
         cookies = generate_fake_cookies()
-    
+
     # Tạo context với stealth mode
     context = browser.new_context(
         user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -157,14 +172,14 @@ def create_stealth_context(browser, use_saved_cookies=True):
             'Referer': 'https://www.1688.com/'
         }
     )
-    
+
     # Thêm cookies vào context
     for cookie in cookies:
         try:
             context.add_cookies([cookie])
         except Exception as e:
             logger.warning(f"Không thể thêm cookie {cookie['name']}: {e}")
-    
+
     # Thêm stealth script nâng cao
     context.add_init_script("""
         // Override webdriver property
@@ -175,7 +190,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
         Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
         Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
         window.chrome = { runtime: {} };
-        
+
         // Override canvas fingerprinting
         const originalGetContext = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function(type, ...args) {
@@ -188,7 +203,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
             }
             return context;
         };
-        
+
         // Override WebGL fingerprinting
         const getParameter = WebGLRenderingContext.prototype.getParameter;
         WebGLRenderingContext.prototype.getParameter = function(parameter) {
@@ -200,7 +215,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
             }
             return getParameter.call(this, parameter);
         };
-        
+
         // Override Audio fingerprinting
         if (window.AudioContext || window.webkitAudioContext) {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -210,20 +225,20 @@ def create_stealth_context(browser, use_saved_cookies=True):
                 return channelData;
             };
         }
-        
+
         // Override permissions
         const originalQuery = navigator.permissions.query;
         navigator.permissions.query = function(parameters) {
             return Promise.resolve({ state: 'granted' });
         };
-        
+
         // Override service worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register = function() {
                 return Promise.resolve({});
             };
         }
-        
+
         // Override battery API
         if ('getBattery' in navigator) {
             navigator.getBattery = function() {
@@ -235,7 +250,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
                 });
             };
         }
-        
+
         // Override connection API
         if ('connection' in navigator) {
             Object.defineProperty(navigator, 'connection', {
@@ -247,7 +262,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
                 })
             });
         }
-        
+
         // Override geolocation
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition = function(success) {
@@ -260,7 +275,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
                 });
             };
         }
-        
+
         // Override timezone
         const originalDateTimeFormat = Intl.DateTimeFormat;
         Intl.DateTimeFormat = function(...args) {
@@ -269,39 +284,39 @@ def create_stealth_context(browser, use_saved_cookies=True):
             }
             return new originalDateTimeFormat(...args);
         };
-        
+
         // Override performance timing
         if (window.performance && window.performance.timing) {
             const timing = window.performance.timing;
             timing.navigationStart = Date.now() - Math.random() * 1000;
         }
-        
+
         // Override console methods
         const originalLog = console.log;
         const originalWarn = console.warn;
         const originalError = console.error;
-        
+
         console.log = function(...args) {
             if (args[0] && typeof args[0] === 'string' && args[0].includes('webdriver')) {
                 return;
             }
             return originalLog.apply(this, args);
         };
-        
+
         console.warn = function(...args) {
             if (args[0] && typeof args[0] === 'string' && args[0].includes('webdriver')) {
                 return;
             }
             return originalWarn.apply(this, args);
         };
-        
+
         console.error = function(...args) {
             if (args[0] && typeof args[0] === 'string' && args[0].includes('webdriver')) {
                 return;
             }
             return originalError.apply(this, args);
         };
-        
+
         // Override localStorage and sessionStorage
         const originalSetItem = Storage.prototype.setItem;
         Storage.prototype.setItem = function(key, value) {
@@ -311,7 +326,7 @@ def create_stealth_context(browser, use_saved_cookies=True):
             return originalSetItem.call(this, key, value);
         };
     """)
-    
+
     return context
 
 def create_session_and_cookies():
@@ -320,23 +335,23 @@ def create_session_and_cookies():
         playwright, browser = setup_browser()
         if not browser:
             return None, None, None
-        
+
         # Tạo context với stealth mode
         context = create_stealth_context(browser, use_saved_cookies=False)
         page = context.new_page()
-        
+
         # Truy cập trang chủ 1688.com để tạo session
         logger.info("Đang tạo session mới trên 1688.com...")
         page.goto("https://www.1688.com/", wait_until='domcontentloaded', timeout=60000)
         time.sleep(5)
-        
+
         # Lấy cookies từ session hiện tại
         cookies = page.context.cookies()
         logger.info(f"Đã tạo session với {len(cookies)} cookies")
-        
+
         # Lưu cookies mới
         save_cookies(cookies)
-        
+
         # Lưu session info
         session_info = {
             'timestamp': time.time(),
@@ -344,13 +359,13 @@ def create_session_and_cookies():
             'user_agent': page.evaluate("navigator.userAgent"),
             'viewport': page.evaluate("({width: window.innerWidth, height: window.innerHeight})")
         }
-        
+
         sessions = load_sessions()
         sessions[f"session_{int(time.time())}"] = session_info
         save_sessions(sessions)
-        
+
         return playwright, browser, context
-        
+
     except Exception as e:
         logger.error(f"Lỗi khi tạo session: {e}")
         if browser:
@@ -380,109 +395,159 @@ def create_new_session():
     """API endpoint để tạo session mới"""
     try:
         logger.info("Bắt đầu tạo session mới...")
-        
+
         playwright, browser, context = create_session_and_cookies()
         if not context:
             return jsonify({"error": "Không thể tạo session"}), 500
-        
+
         try:
             # Lấy thông tin session
             page = context.new_page()
             page.goto("https://www.1688.com/", wait_until='domcontentloaded', timeout=30000)
             time.sleep(3)
-            
+
             session_info = {
                 "status": "success",
                 "message": "Session mới đã được tạo",
                 "cookies_count": len(context.cookies()),
                 "timestamp": time.time()
             }
-            
+
             return jsonify(session_info)
-            
+
         finally:
             if browser:
                 browser.close()
             if playwright:
                 playwright.stop()
-            
+
     except Exception as e:
         logger.error(f"Lỗi khi tạo session: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/load-1688-product', methods=['POST'])
-def load_1688_product():
-    """API endpoint để load sản phẩm 1688.com"""
+"""Loại bỏ route cũ /load-1688-product theo yêu cầu."""
+
+"""Loại bỏ route cũ /enhanced-crawl-1688 theo yêu cầu."""
+
+@swag_from({
+    'tags': ['extractor'],
+    'summary': 'Extractor 1688 (raw) - theo dõi dữ liệu thô như backend extractor',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://detail.1688.com/offer/953742824238.html'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Raw extractor output', 'schema': {'type': 'object'}}}
+})
+@app.route('/extract-1688', methods=['POST'])
+def route_extract_1688():
     try:
-        data = request.get_json()
-        if not data or 'product_id' not in data:
-            return jsonify({"error": "Product ID is required"}), 400
-        
-        product_id = data['product_id']
-        url = f"https://detail.1688.com/offer/{product_id}.html"
-        use_saved_cookies = data.get('use_saved_cookies', True)
-        
-        logger.info(f"Bắt đầu load sản phẩm 1688: {product_id}")
-        
-        # Khởi tạo browser
-        playwright, browser = setup_browser()
-        if not browser:
-            return jsonify({"error": "Không thể khởi tạo browser"}), 500
-        
-        try:
-            # Tạo context với stealth mode
-            context = create_stealth_context(browser, use_saved_cookies=use_saved_cookies)
-            page = context.new_page()
-            
-            # Load trang
-            page.goto(url, wait_until='domcontentloaded', timeout=60000)
-            logger.info(f"Đã load trang sản phẩm thành công: {url}")
-            
-            # Chờ trang load hoàn toàn
-            time.sleep(15)
-            
-            # Chờ thêm để đảm bảo JavaScript đã chạy xong
-            try:
-                page.wait_for_load_state('domcontentloaded', timeout=30000)
-            except:
-                logger.warning("DOM content loaded timeout, tiếp tục với content hiện tại")
-            
-            # Chờ thêm một chút để đảm bảo dữ liệu đã load
-            time.sleep(5)
-            
-            # Lấy page content
-            page_content = page.content()
-            
-            # Parse thông tin sản phẩm từ HTML
-            logger.info(f"Bắt đầu parse thông tin sản phẩm: {product_id}")
-            parsed_product = parser_1688.get_formatted_product_info(page_content)
-            
-            # Lấy nội dung trang cơ bản
-            result = get_page_content(page_content)
-            result["product_id"] = product_id
-            result["sourceId"] = product_id
-            result["sourceType"] = "1688"
-            result["url"] = url
-            result["timestamp"] = time.time()
-            result["cookies_used"] = len(context.cookies())
-            
-            # Thêm thông tin sản phẩm đã parse
-            result["parsed_product"] = parsed_product
-            
-            logger.info(f"Load sản phẩm 1688 thành công: {product_id}")
-            return jsonify(result)
-            
-        finally:
-            # Đóng browser và playwright
-            if browser:
-                browser.close()
-            if playwright:
-                playwright.stop()
-            logger.info("Đã đóng browser")
-            
+        from py_extractors.extractor_1688 import extractor_1688
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        result = extractor_1688.extract(url)
+        return jsonify(result)
     except Exception as e:
-        logger.error(f"Lỗi khi load sản phẩm 1688: {e}")
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Extractor error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform 1688 (chuẩn hoá) - nhận raw JSON từ extractor, trả về format chuẩn',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'raw_data': {
+                    'type': 'object',
+                    'description': 'Raw JSON output từ extractor (có status, url, raw_data, sourceId, ...)',
+                    'example': {
+                        'status': 'success',
+                        'url': 'https://detail.1688.com/offer/953742824238.html',
+                        'raw_data': {
+                            'result': {
+                                'data': {
+                                    'Root': {
+                                        'fields': {
+                                            'dataJson': {}
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        'sourceId': '953742824238',
+                        'sourceType': '1688'
+                    }
+                }
+            },
+            'required': ['raw_data']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-1688', methods=['POST'])
+def route_transform_1688():
+    try:
+        from py_transformers.transformer_1688 import transformer_1688
+        payload = request.get_json() or {}
+
+        # Chấp nhận 2 dạng body:
+        # 1) { "raw_data": { ... } }  ← chuẩn
+        # 2) Toàn bộ JSON từ extractor (có key "result" ở root)  ← linh hoạt
+        if isinstance(payload, dict) and 'raw_data' in payload:
+            raw_input = payload
+        elif isinstance(payload, dict) and 'result' in payload:
+            raw_input = { 'raw_data': payload }
+        else:
+            return jsonify({'error': 'Body phải là {"raw_data": {...}} hoặc JSON có key "result"'}), 400
+
+        transformed = transformer_1688.transform(raw_input)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform 1688 từ URL (tự động extract + transform)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://detail.1688.com/offer/953742824238.html'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-1688-from-url', methods=['POST'])
+def route_transform_1688_from_url():
+    try:
+        from py_extractors.extractor_1688 import extractor_1688
+        from py_transformers.transformer_1688 import transformer_1688
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        raw = extractor_1688.extract(url)
+        transformed = transformer_1688.transform(raw)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/cookies-info', methods=['GET'])
 def get_cookies_info():
@@ -490,7 +555,7 @@ def get_cookies_info():
     try:
         cookies = load_cookies()
         sessions = load_sessions()
-        
+
         return jsonify({
             "status": "success",
             "cookies_count": len(cookies),
@@ -498,7 +563,7 @@ def get_cookies_info():
             "cookies": cookies[:5],  # Chỉ hiển thị 5 cookies đầu
             "sessions": sessions
         })
-        
+
     except Exception as e:
         logger.error(f"Lỗi khi lấy thông tin cookies: {e}")
         return jsonify({"error": str(e)}), 500
