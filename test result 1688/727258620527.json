@@ -1,0 +1,121 @@
+{
+  "images": [
+    "https://cbu01.alicdn.com/img/ibank/O1CN01pDbiiu1Jgbt6gXSQ6_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01gqhXxj1Jgbt6v8IY6_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN012wknrh1Jgbt6dV0ba_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01y633IP1JnTpoTefJu_!!2202828491073-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01GyTd2f1Jgbt9M8GWC_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01HRTwr41Jgbt6gUhvg_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN013nQSCT1JnTq6g19wb_!!2202828491073-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01OdKTjZ1JgbtD6mytp_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01RsQ6rS1Jgbt8FpQc1_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01AxbjxN1Jgbt6dV0ai_!!2215995381058-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01ChxTg91JnTpm4heE9_!!2202828491073-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01p19I5M1JnTqAKyY5w_!!2202828491073-0-cib.jpg"
+  ],
+  "skuProperty": [
+    {
+      "name": "颜色",
+      "values": [
+        {
+          "name": "灰色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01AxbjxN1Jgbt6dV0ai_!!2215995381058-0-cib.jpg"
+        },
+        {
+          "name": "桔红色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01HRTwr41Jgbt6gUhvg_!!2215995381058-0-cib.jpg"
+        },
+        {
+          "name": "粉红色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01OdKTjZ1JgbtD6mytp_!!2215995381058-0-cib.jpg"
+        },
+        {
+          "name": "天蓝色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01RsQ6rS1Jgbt8FpQc1_!!2215995381058-0-cib.jpg"
+        },
+        {
+          "name": "红色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01ChxTg91JnTpm4heE9_!!2202828491073-0-cib.jpg"
+        },
+        {
+          "name": "白色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN013nQSCT1JnTq6g19wb_!!2202828491073-0-cib.jpg"
+        },
+        {
+          "name": "黑色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01p19I5M1JnTqAKyY5w_!!2202828491073-0-cib.jpg"
+        }
+      ]
+    },
+    {
+      "name": "尺码",
+      "values": [
+        {
+          "name": "均码"
+        }
+      ]
+    }
+  ],
+  "sku": [
+    {
+      "canBookCount": "1457",
+      "price": "",
+      "specAttrs": "粉红色|均码"
+    },
+    {
+      "canBookCount": "4489",
+      "price": "",
+      "specAttrs": "桔红色|均码"
+    },
+    {
+      "canBookCount": "8158",
+      "price": "",
+      "specAttrs": "灰色|均码"
+    },
+    {
+      "canBookCount": "2118",
+      "price": "",
+      "specAttrs": "天蓝色|均码"
+    },
+    {
+      "canBookCount": "3987",
+      "price": "",
+      "specAttrs": "红色|均码"
+    },
+    {
+      "canBookCount": "3769",
+      "price": "",
+      "specAttrs": "白色|均码"
+    },
+    {
+      "canBookCount": "3766",
+      "price": "",
+      "specAttrs": "黑色|均码"
+    }
+  ],
+  "maxPrice": "25.00",
+  "name": "2024秋冬新款宽松灰色短款毛衣外套女装加厚拉链长袖针织开衫上衣",
+  "sourceId": "727258620527",
+  "sourceType": "1688",
+  "url": "https://detail.1688.com/offer/727258620527.html",
+  "rangePrices": [
+    {
+      "beginAmount": 1,
+      "price": 25.0,
+      "endAmount": 9,
+      "discountPrice": 25.0
+    },
+    {
+      "beginAmount": 10,
+      "price": 23.0,
+      "endAmount": 19,
+      "discountPrice": 23.0
+    },
+    {
+      "beginAmount": 20,
+      "price": 22.0,
+      "endAmount": 999999,
+      "discountPrice": 22.0
+    }
+  ]
+}

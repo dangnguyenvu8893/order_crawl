@@ -1,0 +1,2504 @@
+{
+  "result": {
+    "data": {
+      "productPackInfo": {
+        "fields": {
+          "unitWeight": 0.6,
+          "uiType": "od_product_pack_info",
+          "label": "商品件重尺"
+        },
+        "id": "productPackInfo",
+        "meta": {
+          "scriptFileName": "pcOfferDetailCrossAttributesViewcomposer"
+        },
+        "position": "body",
+        "tag": "productPackInfo",
+        "type": "od_product_pack_info"
+      },
+      "screen": {
+        "fields": {
+          "uiType": "od_region",
+          "className": "region region-screen",
+          "label": "主屏幕"
+        },
+        "id": "screen",
+        "meta": {},
+        "position": "body",
+        "tag": "screen",
+        "type": "od_region"
+      },
+      "description": {
+        "fields": {
+          "bigPromotionBanner": {
+            "hasBigPromotion": false,
+            "bannerUrl": "",
+            "bannerJumpUrl": "https://mzzi.1688.com/page/activity.htm?offerId=820187943363#promotion"
+          },
+          "uiType": "od_product_description",
+          "detailUrl": "https://itemcdn.tmall.com/1688offer/icoss2265274723e879aebda7c2e948",
+          "label": "详情描述"
+        },
+        "id": "description",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscDetailViewcomposer"
+        },
+        "position": "body",
+        "tag": "description",
+        "type": "od_product_description"
+      },
+      "widgets": {
+        "fields": {
+          "uiType": "od_widgets",
+          "label": "边角工具插件"
+        },
+        "id": "widgets",
+        "meta": {},
+        "position": "body",
+        "tag": "widgets",
+        "type": "od_widgets"
+      },
+      "cart": {
+        "fields": {
+          "partition": [
+            2,
+            1
+          ],
+          "uiType": "od_cart_sider",
+          "label": "选款区"
+        },
+        "id": "cart",
+        "meta": {},
+        "position": "body",
+        "tag": "cart",
+        "type": "od_cart_sider"
+      },
+      "chromePlugin": {
+        "fields": {
+          "uiType": "od_chrome_plugin",
+          "label": "chrome插件"
+        },
+        "id": "chromePlugin",
+        "meta": {},
+        "position": "body",
+        "tag": "chromePlugin",
+        "type": "od_chrome_plugin"
+      },
+      "shopProductRecommend": {
+        "fields": {
+          "uiType": "od_shop_product_recommend",
+          "label": "商家自营销推荐"
+        },
+        "id": "shopProductRecommend",
+        "meta": {},
+        "position": "body",
+        "tag": "shopProductRecommend",
+        "type": "od_shop_product_recommend"
+      },
+      "userRights": {
+        "fields": {
+          "trackInfo": {},
+          "testParam": "test",
+          "operateType": "QUERY_BENEFIT",
+          "uiType": "od_user_rights",
+          "label": "月卡、权益",
+          "isShow": false
+        },
+        "id": "userRights",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscFinaceServiceViewcomposer"
+        },
+        "position": "body",
+        "tag": "userRights",
+        "type": "od_user_rights"
+      },
+      "customMade": {
+        "fields": {
+          "uiType": "od_custom_made",
+          "label": "定制项"
+        },
+        "id": "customMade",
+        "meta": {},
+        "position": "body",
+        "tag": "customMade",
+        "type": "od_custom_made"
+      },
+      "mainServices": {
+        "fields": {
+          "uiType": "od_services",
+          "label": "服务"
+        },
+        "id": "mainServices",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscBuyerServiceViewcomposer"
+        },
+        "position": "body",
+        "tag": "mainServices",
+        "type": "od_services"
+      },
+      "sizeChart": {
+        "fields": {
+          "uiType": "od_size_chart",
+          "label": "商品尺码表"
+        },
+        "id": "sizeChart",
+        "meta": {},
+        "position": "body",
+        "tag": "sizeChart",
+        "type": "od_size_chart"
+      },
+      "submitOrder": {
+        "fields": {
+          "isSkuOffer": true,
+          "marketScene": "default",
+          "isAddCartPromotion": false,
+          "pstatus": "remind",
+          "remindSceneKey": "",
+          "channelType": "dsc",
+          "label": "下单",
+          "isPicPrivate": false,
+          "isPricePrivate": false,
+          "remindText": "",
+          "uiType": "od_submit_order",
+          "businessType": "default",
+          "operateItems": [
+            {
+              "operateType": "ORDER",
+              "disType": "TEXT",
+              "imgUrl": "",
+              "data": {},
+              "name": "立即订购"
+            },
+            {
+              "operateType": "ADD_CART",
+              "disType": "TEXT",
+              "imgUrl": "",
+              "data": {},
+              "name": "加采购车"
+            },
+            {
+              "operateType": "CROSS_BORDER_PUBLISH",
+              "disType": "TEXT",
+              "imgUrl": "",
+              "data": {},
+              "name": "跨境刊登"
+            }
+          ]
+        },
+        "id": "submitOrder",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscOrderViewcomposer"
+        },
+        "position": "body",
+        "tag": "submitOrder",
+        "type": "od_submit_order"
+      },
+      "navTabs": {
+        "fields": {
+          "uiType": "od_nav_tabs",
+          "label": "详情区域页签"
+        },
+        "id": "navTabs",
+        "meta": {},
+        "position": "body",
+        "tag": "navTabs",
+        "type": "od_nav_tabs"
+      },
+      "promotionBanner": {
+        "fields": {
+          "bannerImage": "",
+          "uiType": "od_promotion_banner",
+          "label": "营销氛围"
+        },
+        "id": "promotionBanner",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscDacubannerViewcomposer"
+        },
+        "position": "body",
+        "tag": "promotionBanner",
+        "type": "od_promotion_banner"
+      },
+      "gallery": {
+        "fields": {
+          "offerImgList": [
+            "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+            "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg"
+          ],
+          "isBestOffer": false,
+          "subject": "美式复古小熊刺绣撞色包边棉服男女冬季时尚菱格宽松加厚翻领外套",
+          "isBestOfferUrl": "https://img.alicdn.com/tfs/TB1ZwSvqG6qK1RjSZFmXXX0PFXa-100-100.png",
+          "uiType": "od_picture_gallery",
+          "offerId": 820187943363,
+          "video": {
+            "videoId": 0,
+            "state": 0
+          },
+          "label": "商品主图",
+          "canShowAllImage": true
+        },
+        "id": "gallery",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscImageViewcomposer"
+        },
+        "position": "body",
+        "tag": "gallery",
+        "type": "od_picture_gallery"
+      },
+      "product": {
+        "fields": {
+          "uiType": "od_region",
+          "className": "region region-screen-product",
+          "label": "产品"
+        },
+        "id": "product",
+        "meta": {},
+        "position": "body",
+        "tag": "product",
+        "type": "od_region"
+      },
+      "shopNavigation": {
+        "fields": {
+          "uiType": "od_shop_navigation",
+          "label": "旺铺导航"
+        },
+        "id": "shopNavigation",
+        "meta": {},
+        "position": "body",
+        "tag": "shopNavigation",
+        "type": "od_shop_navigation"
+      },
+      "Root": {
+        "fields": {
+          "isRoot": true,
+          "uiType": "od_region",
+          "label": "商品详情页",
+          "dataJson": {
+            "isSkuOffer": true,
+            "hasBigPromotion": false,
+            "tempModel": {
+              "offerUnit": "件",
+              "offerId": 820187943363,
+              "offerTitle": "美式复古小熊刺绣撞色包边棉服男女冬季时尚菱格宽松加厚翻领外套",
+              "defaultOfferImg": "",
+              "topCategoryId": 10166,
+              "postCategoryId": 303,
+              "companyName": "河南省靓客服装有限公司",
+              "sellerUserId": 994008025,
+              "sellerLoginId": "靓客服装",
+              "sellerMemberId": "db720",
+              "winportUrl": "https://winport.m.1688.com/page/index.html?memberId=db720",
+              "saledCount": 3615
+            },
+            "isSourcePromotion": false,
+            "exposeInfo": {
+              "exposeArgs": {
+                "isYanxuanOffer": "false",
+                "sceneType": "default",
+                "ipvId": "213e371517554277187924968ebbf7",
+                "isPlusMember": "false",
+                "verticalType": "default",
+                "offerId": "820187943363",
+                "channelType": "dsc"
+              }
+            },
+            "channelType": "dsc",
+            "offerMemberTags": [
+              82945,
+              81921,
+              93185,
+              4306497,
+              52225,
+              38401,
+              210944,
+              4359745,
+              218112,
+              422914,
+              503298,
+              475650,
+              519170,
+              4845121,
+              5219905,
+              5247553,
+              5254209,
+              5254721,
+              4055553,
+              4136449,
+              4134913,
+              4109313,
+              29248,
+              28736,
+              28224,
+              394306,
+              449090,
+              393794,
+              442434,
+              422978,
+              467011,
+              439874,
+              498242,
+              509506,
+              481346,
+              501314,
+              268866,
+              535106,
+              562242,
+              675905,
+              5023233,
+              5032961,
+              4995585,
+              5215745,
+              5303297,
+              5261313,
+              3674177,
+              4001345,
+              4134977,
+              83073,
+              81537,
+              93313,
+              82561,
+              4307649,
+              232064,
+              449154,
+              448642,
+              457346,
+              424578,
+              420994,
+              512642,
+              501378,
+              516738,
+              4503233,
+              473218,
+              500354,
+              340611,
+              587394,
+              562818,
+              5167809,
+              5291713,
+              5253313,
+              5254849,
+              3842177,
+              4135041,
+              209600,
+              235712,
+              399554,
+              4480641,
+              385730,
+              4839041,
+              535234,
+              584387,
+              5110401,
+              5271681,
+              5291137,
+              3056835,
+              3778753,
+              3691713,
+              4055745,
+              3992769,
+              83201,
+              21248,
+              22784,
+              82177,
+              82689,
+              17665,
+              26369,
+              140032,
+              4408641,
+              201984,
+              205056,
+              241408,
+              198400,
+              399106,
+              446722,
+              393986,
+              393474,
+              440066,
+              403714,
+              481538,
+              514818,
+              522498,
+              473346,
+              480002,
+              481026,
+              384259,
+              540930,
+              572162,
+              544514,
+              5095745,
+              5139777,
+              5117249,
+              5261121,
+              5277505,
+              5292353,
+              21312,
+              161600,
+              170816,
+              202048,
+              209216,
+              242496,
+              439106,
+              438594,
+              412482,
+              522562,
+              473410,
+              493378,
+              504641,
+              386370,
+              382274,
+              892225,
+              5056257,
+              5001473,
+              5232385,
+              5210369,
+              5192449,
+              5172481,
+              5277441,
+              5291777,
+              3691841,
+              4135745,
+              81793,
+              93057,
+              28032,
+              4249025,
+              33665,
+              4247489,
+              4413377,
+              220544,
+              216960,
+              201088,
+              4342209,
+              425858,
+              426882,
+              458114,
+              421250,
+              4503489,
+              472962,
+              306562,
+              386434,
+              364930,
+              4798913,
+              4728769,
+              564610,
+              531842,
+              572290,
+              5195201,
+              1100451329,
+              1100442624,
+              1100580864,
+              3705729,
+              3882881,
+              4189569,
+              4134785,
+              153024,
+              139712,
+              170944,
+              210880,
+              393666,
+              412098,
+              414146,
+              493506,
+              270786,
+              339394,
+              564162,
+              564674,
+              5234049,
+              5170049,
+              5117313,
+              5292417,
+              3792321
+            ],
+            "needSkuHide": false,
+            "hasConsignReation": false,
+            "isPicPrivate": false,
+            "supportPuhuo": true,
+            "isPricePrivate": false,
+            "orderParamModel": {
+              "orderParam": {
+                "saledCount": 3615,
+                "mixParam": {
+                  "mixNum": 1,
+                  "mixAmount": 200,
+                  "shopMixNum": 2147483647,
+                  "mixBegin": 0,
+                  "supportMix": true
+                },
+                "beginNum": 1,
+                "canBookedAmount": 4952,
+                "skuParam": {
+                  "skuPriceType": "rangePrice",
+                  "skuRangePrices": [
+                    {
+                      "price": "32.00",
+                      "beginAmount": "1"
+                    }
+                  ]
+                },
+                "flow": "general",
+                "addCartParam": {
+                  "cartType": ""
+                }
+              }
+            },
+            "qrCode": "https://m.1688.com/offer/820187943363.html?sk=order",
+            "sevenDaysRefund": false,
+            "detailModel": [],
+            "hasPurcharseMark": false,
+            "showOldOD": false,
+            "offerSign": {
+              "isSkuOffer": true,
+              "isPreSell": false,
+              "isConsignMarketOffer": true,
+              "isOnlyNPorcessingOffer": false,
+              "isOfferSupportOnlineTrade": true,
+              "isDistribution": true,
+              "hasBusinessPrice": false,
+              "hasJoinBusinessPrice": false,
+              "isPreSaleOffer": false,
+              "isVirtualCategory": false,
+              "preHeatOfferCanTrade": true,
+              "isChtSingleOffer": true,
+              "isDetailForbidden": false
+            },
+            "abTestInfo": {
+              "exposeClickInfo": {},
+              "pvTrackInfo": {
+                "AbTIds": "30739",
+                "AbIds": "2515412#2517407#2494220#2518968"
+              },
+              "abTestValueInfo": {
+                "od_new_black_brand_txt": "1",
+                "showOfferSizeTable": "1",
+                "page_yanxuan_od_auth": "1",
+                "gypsanweisku": "1",
+                "zeus_gyp_sku_select_hot_recommend": "0",
+                "zeus_gyp_onhand_price": "1",
+                "page_zgc_dimension": "0",
+                "page_yanxuan_qualityCert": "N",
+                "page_dsc_xhdz_upgrade": "1",
+                "page_add_custom_service": "1",
+                "gyp_sku_info": "0"
+              }
+            },
+            "componentType": "page",
+            "marketScene": "default",
+            "images": [
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg"
+              },
+              {
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.220x220.jpg",
+                "imageURI": "img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.search.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.summ.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.310x310.jpg",
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg"
+              }
+            ],
+            "isActHottimingOffer": false,
+            "filterModel": [],
+            "offerModelSign": {
+              "isBuyerProtection": true,
+              "isConsignMarketOffer": true,
+              "isCrossBorderOffer": true,
+              "isSupportMix": true,
+              "isOnePsale": true,
+              "isSupplyStockOffer": true,
+              "hasFreightTemplate": true,
+              "isRangePriceSku": true,
+              "isGovCouponOfferInOD": false,
+              "hasSearchPicture": true,
+              "hasWhitePicInOffer": true,
+              "hasOrder": true,
+              "isTbDistributionOffer": true,
+              "isOptimalLogisticsOffer": true,
+              "isAegisTrade": true,
+              "isHtqqItem": true,
+              "isQuickBackSceneOffer": true,
+              "isSearchOffer": true,
+              "isCBDistribution": true,
+              "isGspOffer": true,
+              "isAlipaySupported": true,
+              "isGpfOffer": true,
+              "isWxzfOffer": true,
+              "isDistributionPriceUpgrade": true,
+              "huiyuanhaokaidanyanxuan": true,
+              "isSupportStock": true,
+              "isCUserOutboundRed": true,
+              "isChtOffer": true,
+              "isCreateSupplyProduct": true,
+              "isPopularOffer": true,
+              "hasSendGoodsAddress": true
+            },
+            "topBarModel": [],
+            "activityModel": {
+              "activityStartTimestamps": 0,
+              "activityEndTimestamps": 0
+            },
+            "shareModel": [],
+            "mixModel": {
+              "isSupportMix": true,
+              "mixOneForSale": true,
+              "mixNumber": 1,
+              "mixAmount": 200
+            },
+            "operateDisplayStatus": "ORDER_NOW",
+            "reserveData": {},
+            "tmPickScene": false,
+            "skuModel": {
+              "skuProps": [
+                {
+                  "fid": 3216,
+                  "prop": "颜色",
+                  "value": [
+                    {
+                      "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg",
+                      "name": "杏色（内里加绒）"
+                    },
+                    {
+                      "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+                      "name": "黑色（内里加绒）"
+                    },
+                    {
+                      "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg",
+                      "name": "粉红色（内里加绒）"
+                    }
+                  ]
+                },
+                {
+                  "fid": 450,
+                  "prop": "尺码",
+                  "value": [
+                    {
+                      "name": "M（100斤内）"
+                    },
+                    {
+                      "name": "L（100-115斤）"
+                    },
+                    {
+                      "name": "XL（115-130斤）"
+                    },
+                    {
+                      "name": "2XL（130-150斤）"
+                    }
+                  ]
+                }
+              ],
+              "skuInfoMap": {
+                "粉红色（内里加绒）&gt;L（100-115斤）": {
+                  "specId": "9ebfcd0d352ab4cc4cc0ddb6c32bf92c",
+                  "specAttrs": "粉红色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 471,
+                  "skuId": 5777183375199,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;XL（115-130斤）": {
+                  "specId": "e2705f2de8149549f7abec27c7a0a2dd",
+                  "specAttrs": "黑色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 324,
+                  "skuId": 5777183375195,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;XL（115-130斤）": {
+                  "specId": "6fa85f782946baf433380cb706e03364",
+                  "specAttrs": "杏色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 414,
+                  "skuId": 5777183375197,
+                  "isPromotionSku": false
+                },
+                "粉红色（内里加绒）&gt;M（100斤内）": {
+                  "specId": "21dfd578300ae641db14d0196f4ae620",
+                  "specAttrs": "粉红色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 478,
+                  "skuId": 5777183375205,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;M（100斤内）": {
+                  "specId": "e2daec09932e90c1d0aecb447f8db052",
+                  "specAttrs": "黑色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 350,
+                  "skuId": 5777183375204,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;L（100-115斤）": {
+                  "specId": "0fa3c9afa1a8d08c20a93a84237c7ae4",
+                  "specAttrs": "杏色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 310,
+                  "skuId": 5777183375200,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;2XL（130-150斤）": {
+                  "specId": "2ac491bf677709d9c2e7ddafb11e23ce",
+                  "specAttrs": "黑色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 387,
+                  "skuId": 5787744479542,
+                  "isPromotionSku": false
+                },
+                "粉红色（内里加绒）&gt;2XL（130-150斤）": {
+                  "specId": "e8dc3a01e00628f432892b1d39b33209",
+                  "specAttrs": "粉红色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 544,
+                  "skuId": 5787744479543,
+                  "isPromotionSku": false
+                },
+                "粉红色（内里加绒）&gt;XL（115-130斤）": {
+                  "specId": "933d550b069996a2b4c65aead1f5411a",
+                  "specAttrs": "粉红色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 518,
+                  "skuId": 5777183375196,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;L（100-115斤）": {
+                  "specId": "253ef2691c5b2500bddfabf43c78dc17",
+                  "specAttrs": "黑色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 273,
+                  "skuId": 5777183375198,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;M（100斤内）": {
+                  "specId": "04356bc72ac2e630971a8fa8e85c2b52",
+                  "specAttrs": "杏色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 348,
+                  "skuId": 5777183375206,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;2XL（130-150斤）": {
+                  "specId": "7d8ab447cb1d1c2e18ec44b0f8eeaf6f",
+                  "specAttrs": "杏色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 535,
+                  "skuId": 5787744479544,
+                  "isPromotionSku": false
+                }
+              },
+              "skuPriceScale": "32.00",
+              "skuInfoMapOriginal": {
+                "粉红色（内里加绒）&gt;L（100-115斤）": {
+                  "specId": "9ebfcd0d352ab4cc4cc0ddb6c32bf92c",
+                  "specAttrs": "粉红色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 471,
+                  "skuId": 5777183375199,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;XL（115-130斤）": {
+                  "specId": "e2705f2de8149549f7abec27c7a0a2dd",
+                  "specAttrs": "黑色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 324,
+                  "skuId": 5777183375195,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;XL（115-130斤）": {
+                  "specId": "6fa85f782946baf433380cb706e03364",
+                  "specAttrs": "杏色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 414,
+                  "skuId": 5777183375197,
+                  "isPromotionSku": false
+                },
+                "粉红色（内里加绒）&gt;M（100斤内）": {
+                  "specId": "21dfd578300ae641db14d0196f4ae620",
+                  "specAttrs": "粉红色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 478,
+                  "skuId": 5777183375205,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;M（100斤内）": {
+                  "specId": "e2daec09932e90c1d0aecb447f8db052",
+                  "specAttrs": "黑色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 350,
+                  "skuId": 5777183375204,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;L（100-115斤）": {
+                  "specId": "0fa3c9afa1a8d08c20a93a84237c7ae4",
+                  "specAttrs": "杏色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 310,
+                  "skuId": 5777183375200,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;2XL（130-150斤）": {
+                  "specId": "2ac491bf677709d9c2e7ddafb11e23ce",
+                  "specAttrs": "黑色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 387,
+                  "skuId": 5787744479542,
+                  "isPromotionSku": false
+                },
+                "粉红色（内里加绒）&gt;2XL（130-150斤）": {
+                  "specId": "e8dc3a01e00628f432892b1d39b33209",
+                  "specAttrs": "粉红色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 544,
+                  "skuId": 5787744479543,
+                  "isPromotionSku": false
+                },
+                "粉红色（内里加绒）&gt;XL（115-130斤）": {
+                  "specId": "933d550b069996a2b4c65aead1f5411a",
+                  "specAttrs": "粉红色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 518,
+                  "skuId": 5777183375196,
+                  "isPromotionSku": false
+                },
+                "黑色（内里加绒）&gt;L（100-115斤）": {
+                  "specId": "253ef2691c5b2500bddfabf43c78dc17",
+                  "specAttrs": "黑色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 273,
+                  "skuId": 5777183375198,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;M（100斤内）": {
+                  "specId": "04356bc72ac2e630971a8fa8e85c2b52",
+                  "specAttrs": "杏色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 348,
+                  "skuId": 5777183375206,
+                  "isPromotionSku": false
+                },
+                "杏色（内里加绒）&gt;2XL（130-150斤）": {
+                  "specId": "7d8ab447cb1d1c2e18ec44b0f8eeaf6f",
+                  "specAttrs": "杏色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 535,
+                  "skuId": 5787744479544,
+                  "isPromotionSku": false
+                }
+              },
+              "skuPriceScaleOriginal": "null"
+            },
+            "offerBaseInfo": {
+              "sellerUserId": 994008025,
+              "sellerLoginId": "靓客服装",
+              "sellerMemberId": "db720",
+              "offerId": 820187943363,
+              "buyerUserId": 0,
+              "buyerLoginId": 0,
+              "sellerWinportUrl": "https://mzzi.1688.com",
+              "catId": 303,
+              "tradeTemplateId": "[0]",
+              "wholeNetworkEvaluation": false,
+              "shieldPcOfferDetail": false
+            },
+            "sellerSign": {
+              "isIndustrySeller": false,
+              "isSlsj": false,
+              "signs": {
+                "isIndustrySeller": false,
+                "isSlsj": false,
+                "isChtMember": false,
+                "isTp": true,
+                "isEaseBuyDealer": false,
+                "isFactoryDealer": false
+              },
+              "isTp": true,
+              "isChtMember": false
+            },
+            "canIgnoreConsignRelation": false,
+            "businessType": "default"
+          }
+        },
+        "id": "Root",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscGlobalDataViewcomposer"
+        },
+        "position": "body",
+        "tag": "Root",
+        "type": "od_region"
+      },
+      "mainPrice": {
+        "fields": {
+          "isBmPrice": false,
+          "channel": "dsc",
+          "isVipPrice": false,
+          "bigPromotionInfo": {
+            "bigPromotionCountdown": -1,
+            "preheatTime": -1,
+            "promotionResources": {},
+            "burstEndTime": -1,
+            "bigPromotionStatus": "NONE",
+            "burstBeginTime": -1
+          },
+          "finalPriceModel": {
+            "tradeWithoutPromotion": {
+              "skuMapOriginal": [
+                {
+                  "specId": "9ebfcd0d352ab4cc4cc0ddb6c32bf92c",
+                  "specAttrs": "粉红色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 471,
+                  "skuId": 5777183375199,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "e2705f2de8149549f7abec27c7a0a2dd",
+                  "specAttrs": "黑色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 324,
+                  "skuId": 5777183375195,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "6fa85f782946baf433380cb706e03364",
+                  "specAttrs": "杏色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 414,
+                  "skuId": 5777183375197,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "21dfd578300ae641db14d0196f4ae620",
+                  "specAttrs": "粉红色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 478,
+                  "skuId": 5777183375205,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "e2daec09932e90c1d0aecb447f8db052",
+                  "specAttrs": "黑色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 350,
+                  "skuId": 5777183375204,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "0fa3c9afa1a8d08c20a93a84237c7ae4",
+                  "specAttrs": "杏色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 310,
+                  "skuId": 5777183375200,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "2ac491bf677709d9c2e7ddafb11e23ce",
+                  "specAttrs": "黑色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 387,
+                  "skuId": 5787744479542,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "e8dc3a01e00628f432892b1d39b33209",
+                  "specAttrs": "粉红色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 544,
+                  "skuId": 5787744479543,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "933d550b069996a2b4c65aead1f5411a",
+                  "specAttrs": "粉红色（内里加绒）&gt;XL（115-130斤）",
+                  "saleCount": 0,
+                  "canBookCount": 518,
+                  "skuId": 5777183375196,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "253ef2691c5b2500bddfabf43c78dc17",
+                  "specAttrs": "黑色（内里加绒）&gt;L（100-115斤）",
+                  "saleCount": 0,
+                  "canBookCount": 273,
+                  "skuId": 5777183375198,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "04356bc72ac2e630971a8fa8e85c2b52",
+                  "specAttrs": "杏色（内里加绒）&gt;M（100斤内）",
+                  "saleCount": 0,
+                  "canBookCount": 348,
+                  "skuId": 5777183375206,
+                  "isPromotionSku": false
+                },
+                {
+                  "specId": "7d8ab447cb1d1c2e18ec44b0f8eeaf6f",
+                  "specAttrs": "杏色（内里加绒）&gt;2XL（130-150斤）",
+                  "saleCount": 0,
+                  "canBookCount": 535,
+                  "skuId": 5787744479544,
+                  "isPromotionSku": false
+                }
+              ],
+              "OfferIsSkuTradeSupported": false,
+              "offerMaxPrice": "32.00",
+              "offerBeginAmount": 1,
+              "offerPriceDisplay": "32.00",
+              "canBookedAmountOriginal": 4952,
+              "offerPriceRanges": [
+                {
+                  "price": "32.00",
+                  "beginAmount": 1,
+                  "discountPrice": "32.00",
+                  "endAmount": 0
+                }
+              ],
+              "offerMinPrice": "32.00"
+            },
+            "priceBeforeText": "券后"
+          },
+          "marketScene": "default",
+          "trackInfo": {},
+          "isPrivatePrice": false,
+          "originPriceType": "rangePrice",
+          "activityModel": {
+            "beforePro": false,
+            "privilegesType": "default"
+          },
+          "priceModel": {
+            "currentPrices": [
+              {
+                "price": "32.00",
+                "beginAmount": 1
+              }
+            ],
+            "priceDisplayType": "rangePrice",
+            "priceLabel": ""
+          },
+          "bigPromotion": false,
+          "label": "价格",
+          "displayType": "normal-sku",
+          "unit": "件",
+          "secondaryAtmosphere": {},
+          "uiType": "od_main_price",
+          "isPlusPrice": false,
+          "originalPricesWithoutPromotion": [
+            {
+              "price": "32.00",
+              "beginAmount": 1
+            }
+          ]
+        },
+        "id": "mainPrice",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscPriceViewcomposer"
+        },
+        "position": "body",
+        "tag": "mainPrice",
+        "type": "od_main_price"
+      },
+      "bottom": {
+        "fields": {
+          "uiType": "od_region",
+          "className": "region region-bottom",
+          "label": "页面尾部"
+        },
+        "id": "bottom",
+        "meta": {},
+        "position": "body",
+        "tag": "bottom",
+        "type": "od_region"
+      },
+      "productWarning": {
+        "fields": {
+          "isCautionOffer": false,
+          "uiType": "od_product_warning",
+          "cautionText": "1688提醒您：",
+          "label": "警示证书",
+          "officialDocInfos": []
+        },
+        "id": "productWarning",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscOfficialDocViewcomposer"
+        },
+        "position": "body",
+        "tag": "productWarning",
+        "type": "od_product_warning"
+      },
+      "productAttributes": {
+        "fields": {
+          "uiType": "od_product_attributes",
+          "label": "商品参数"
+        },
+        "id": "productAttributes",
+        "meta": {
+          "errorMessage": "class com.alibaba.fastjson.JSONArray cannot be cast to class com.alibaba.fastjson.JSONObject (com.alibaba.fastjson.JSONArray and com.alibaba.fastjson.JSONObject are in unnamed module of loader com.taobao.pandora.boot.loader.LaunchedURLClassLoader @39aba6)",
+          "scriptFileName": "pcOfferDetailProcessingAttributesViewcomposer"
+        },
+        "position": "body",
+        "tag": "productAttributes",
+        "type": "od_product_attributes"
+      },
+      "productTitle": {
+        "fields": {
+          "isBestOffer": false,
+          "saleCountDate": "全网销量",
+          "label": "产品标题",
+          "title": "美式复古小熊刺绣撞色包边棉服男女冬季时尚菱格宽松加厚翻领外套",
+          "saleNum": "3600+",
+          "labels": [
+            "一件代发"
+          ],
+          "isShowEdit": false,
+          "tagList": [
+            {
+              "img": "https://gw.alicdn.com/imgextra/i2/O1CN01hNYSIf22eSkGGUwng_!!6000000007145-2-tps-188-56.png",
+              "text": "1688严选",
+              "type": "1688_ELECTION",
+              "detail": [
+                {
+                  "icon": "https://gw.alicdn.com/imgextra/i2/O1CN01ocXV9u1k1qAcVUuZa_!!6000000004624-2-tps-41-36.png",
+                  "text": "品质严选，放心采购"
+                },
+                {
+                  "icon": "https://gw.alicdn.com/imgextra/i3/O1CN01H5WVsg28BVIahbDwn_!!6000000007894-2-tps-54-57.png",
+                  "text": "现货快发，服务保障"
+                }
+              ]
+            }
+          ],
+          "unit": "件",
+          "editUrl": "https://offer.1688.com/offer/post/fillProductInfo.htm?operator=edit&offerId=820187943363&pageSrc=fusion&frontVersion=2017",
+          "uiType": "od_title",
+          "officialActivityIcon": ""
+        },
+        "id": "productTitle",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscTitleViewcomposer"
+        },
+        "position": "body",
+        "tag": "productTitle",
+        "type": "od_title"
+      },
+      "skuSelection": {
+        "fields": {
+          "uiType": "od_sku_selection",
+          "label": "规格选择器"
+        },
+        "id": "skuSelection",
+        "meta": {},
+        "position": "body",
+        "tag": "skuSelection",
+        "type": "od_sku_selection"
+      },
+      "productEvaluation": {
+        "fields": {
+          "uiType": "od_product_evaluation",
+          "label": "商品评价"
+        },
+        "id": "productEvaluation",
+        "meta": {},
+        "position": "body",
+        "tag": "productEvaluation",
+        "type": "od_product_evaluation"
+      },
+      "sceneKey": {
+        "fields": {
+          "selectedScene": {
+            "sceneKey": "order",
+            "sceneName": "批发"
+          },
+          "coord": {
+            "business": "default",
+            "scene": "default",
+            "useCase": "1688_pc_detail",
+            "atmosphere": "normal",
+            "role": "defaultBuyer",
+            "appPlatform": "",
+            "appVersion": "",
+            "custom": [],
+            "channel": "dsc"
+          },
+          "trackInfo": {},
+          "uiType": "od_scene_key",
+          "offerId": 820187943363,
+          "sceneList": [
+            {
+              "sceneKey": "order",
+              "sceneName": "批发",
+              "url": "https://detail.1688.com/offer/820187943363.html?sk=order"
+            },
+            {
+              "sceneKey": "consign",
+              "sceneName": "代发",
+              "url": "https://detail.1688.com/offer/820187943363.html?sk=consign"
+            }
+          ],
+          "label": "场景页签",
+          "handleProcessingTab": false,
+          "memberId": "db720"
+        },
+        "id": "sceneKey",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscTabViewViewcomposer"
+        },
+        "position": "body",
+        "tag": "sceneKey",
+        "type": "od_scene_key"
+      },
+      "discountCoupon": {
+        "fields": {
+          "uiType": "od_discount_coupon",
+          "label": "折扣优惠"
+        },
+        "id": "discountCoupon",
+        "meta": {
+          "scriptFileName": "pcOfferDetailDscPromotionViewcomposer"
+        },
+        "position": "body",
+        "tag": "discountCoupon",
+        "type": "od_discount_coupon"
+      }
+    },
+    "endpoint": {
+      "mode": "PC",
+      "osVersion": "9.9.9",
+      "protocolVersion": "3.0",
+      "standard": true,
+      "ultronage": true
+    },
+    "global": {
+      "globalData": {
+        "traceId": "213e371517554277187924968ebbf7",
+        "parametersMap": {
+          "spm": "a260k.home2025.recommendpart.33",
+          "offerLoginId": "靓客服装",
+          "offerId": 820187943363
+        },
+        "model": {
+          "buyerModel": {
+            "buyerExtendInfo": {
+              "shieldPcOfferDetail": "false"
+            },
+            "buyerSign": {
+              "businessBuyer": false,
+              "hasAuth": true,
+              "privateBuyer": false,
+              "self": false,
+              "sellerPartner": false,
+              "signs": {
+                "hasAuth": true,
+                "visitorPicAuth": true,
+                "isSellerPartner": false,
+                "isBusinessBuyer": false,
+                "isSelf": false,
+                "visitorPriceAuth": true
+              },
+              "visitorPicAuth": true,
+              "visitorPriceAuth": true
+            },
+            "gradeLevel": "0",
+            "vipBuyer": false
+          },
+          "channelBizType": "DSC",
+          "channelType": "dsc",
+          "consignModel": {
+            "consignOffer": false,
+            "consignSign": {
+              "canIgnoreConsignRelation": false,
+              "signs": {
+                "supportDistribution": true,
+                "isCanIgnoreConsignRelation": false,
+                "isSupportConsignIssuing": false,
+                "hasConsignReation": false
+              },
+              "supportConsignIssuing": false,
+              "supportDistribution": true
+            },
+            "distributeChannels": [
+              {
+                "name": "淘宝",
+                "typeCode": "thyny"
+              },
+              {
+                "name": "Lazada",
+                "typeCode": "lazada"
+              },
+              {
+                "name": "Amazon",
+                "typeCode": "amazon"
+              },
+              {
+                "name": "Shopify",
+                "typeCode": "shopify"
+              },
+              {
+                "name": "Shopee",
+                "typeCode": "shopee"
+              }
+            ],
+            "hasConsignPrice": false
+          },
+          "detailBusiness": {
+            "whole_sale_count": 3647,
+            "favorCount": 2973,
+            "deliveryLimitTimeModel": {
+              "attrs": {
+                "offerUnit": "件"
+              },
+              "expectTimeDesc": "",
+              "limitTimeDesc": "",
+              "offerId": 820187943363
+            }
+          },
+          "detailDescription": {
+            "abTestInfo": {
+              "abTestValueInfo": {
+                "od_new_black_brand_txt": "1",
+                "showOfferSizeTable": "1",
+                "page_yanxuan_od_auth": "1",
+                "gypsanweisku": "1",
+                "zeus_gyp_sku_select_hot_recommend": "0",
+                "zeus_gyp_onhand_price": "1",
+                "page_zgc_dimension": "0",
+                "page_yanxuan_qualityCert": "N",
+                "page_dsc_xhdz_upgrade": "1",
+                "page_add_custom_service": "1",
+                "gyp_sku_info": "0"
+              },
+              "exposeClickInfo": {},
+              "pvTrackInfo": {
+                "AbTIds": "30739",
+                "AbIds": "2515412#2517407#2494220#2518968"
+              }
+            },
+            "banners": {
+              "aliPayOfferDetailBanner": {
+                "bannerJumpUrl": "",
+                "bannerUrl": ""
+              },
+              "offerDetailBanner24V1": {
+                "bannerJumpUrl": "",
+                "bannerUrl": ""
+              },
+              "bigPromotionBanner": {
+                "bannerJumpUrl": "https://mzzi.1688.com/page/activity.htm?offerId=820187943363#promotion",
+                "bannerUrl": ""
+              },
+              "offerDetailBanner": {
+                "bannerJumpUrl": "",
+                "bannerUrl": ""
+              },
+              "dacuBanner": {
+                "bannerJumpUrl": "",
+                "bannerUrl": ""
+              }
+            },
+            "crossBorderInfos": {
+              "kjPCDistributionName": "跨境刊登"
+            },
+            "dataDesc": {
+              "payOrder30DayStr": "800+"
+            },
+            "exposeInfo": {
+              "exposeArgs": {
+                "isYanxuanOffer": "false",
+                "sceneType": "default",
+                "ipvId": "213e371517554277187924968ebbf7",
+                "isPlusMember": "false",
+                "verticalType": "default",
+                "offerId": "820187943363",
+                "channelType": "dsc"
+              }
+            },
+            "images": {
+              "activityBackColor": "",
+              "cautionImageUrl": "",
+              "shareWithGiftIcon": "https://gw.alicdn.com/tfs/TB1YYyRuhTpK1RjSZFMXXbG_VXa-36-36.png",
+              "wirelessCorner": "",
+              "activityUrl": "",
+              "wirelessLabel": "",
+              "background": "",
+              "backgroundIcon": "",
+              "iconUrl": "",
+              "officialActivityIcon": ""
+            },
+            "offerUVOf7Day": 522,
+            "officialDocInfos": [],
+            "protectionInfoList": [],
+            "shareActivityInfo": {},
+            "texts": {
+              "brandRelationType": "",
+              "brandName": "",
+              "tradeTemplateId": "[0]",
+              "cautionText": "",
+              "wirelessLabelText": ""
+            },
+            "urls": {}
+          },
+          "offerDetail": {
+            "detailUrl": "https://itemcdn.tmall.com/1688offer/icoss2265274723e879aebda7c2e948",
+            "featureAttributes": [
+              {
+                "fid": 1398,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "货号",
+                "outputType": 0,
+                "value": "MY2806K",
+                "values": [
+                  "MY2806K"
+                ]
+              },
+              {
+                "fid": 2847,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "填充物",
+                "outputType": 0,
+                "value": "丝棉（聚酯纤维）",
+                "values": [
+                  "丝棉（聚酯纤维）"
+                ]
+              },
+              {
+                "fid": 100031521,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "面料名称",
+                "outputType": 0,
+                "value": "聚酯纤维",
+                "values": [
+                  "聚酯纤维"
+                ]
+              },
+              {
+                "fid": 117130178,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "主面料成分",
+                "outputType": 0,
+                "value": "聚酯纤维",
+                "values": [
+                  "聚酯纤维"
+                ]
+              },
+              {
+                "fid": 31610,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "衣长",
+                "outputType": 0,
+                "value": "普通款(50cm<衣长≤65cm)",
+                "values": [
+                  "普通款(50cm<衣长≤65cm)"
+                ]
+              },
+              {
+                "fid": 7001,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "袖长",
+                "outputType": 0,
+                "value": "长袖",
+                "values": [
+                  "长袖"
+                ]
+              },
+              {
+                "fid": 42842855,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "版型",
+                "outputType": 0,
+                "value": "宽松型",
+                "values": [
+                  "宽松型"
+                ]
+              },
+              {
+                "fid": 20602,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "领型",
+                "outputType": 0,
+                "value": "翻领",
+                "values": [
+                  "翻领"
+                ]
+              },
+              {
+                "fid": 100000709,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "门襟",
+                "outputType": 0,
+                "value": "单排多扣",
+                "values": [
+                  "单排多扣"
+                ]
+              },
+              {
+                "fid": 8614,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "流行元素",
+                "outputType": 0,
+                "value": "口袋",
+                "values": [
+                  "口袋"
+                ]
+              },
+              {
+                "fid": 20666,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "上市年份/季节",
+                "outputType": 0,
+                "value": "2024年冬季",
+                "values": [
+                  "2024年冬季"
+                ]
+              },
+              {
+                "fid": 3216,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "颜色",
+                "outputType": 0,
+                "value": "杏色（内里加绒）,黑色（内里加绒）,粉红色（内里加绒）",
+                "values": [
+                  "杏色（内里加绒）",
+                  "黑色（内里加绒）",
+                  "粉红色（内里加绒）"
+                ]
+              },
+              {
+                "fid": 450,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "尺码",
+                "outputType": 0,
+                "value": "M（100斤内）,L（100-115斤）,XL（115-130斤）,2XL（130-150斤）",
+                "values": [
+                  "M（100斤内）",
+                  "L（100-115斤）",
+                  "XL（115-130斤）",
+                  "2XL（130-150斤）"
+                ]
+              },
+              {
+                "fid": 2489638,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "风格类型",
+                "outputType": 0,
+                "value": "日韩休闲",
+                "values": [
+                  "日韩休闲"
+                ]
+              },
+              {
+                "fid": 7002,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "厚薄",
+                "outputType": 0,
+                "value": "中等",
+                "values": [
+                  "中等"
+                ]
+              },
+              {
+                "fid": 2917380,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "袖型",
+                "outputType": 0,
+                "value": "常规袖",
+                "values": [
+                  "常规袖"
+                ]
+              },
+              {
+                "fid": 2900,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "图案",
+                "outputType": 0,
+                "value": "纯色",
+                "values": [
+                  "纯色"
+                ]
+              },
+              {
+                "fid": 149092418,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "主面料成分含量",
+                "value": "95%及以上",
+                "values": [
+                  "95%及以上"
+                ]
+              },
+              {
+                "fid": 401,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "风格",
+                "value": "韩系风",
+                "values": [
+                  "韩系风"
+                ]
+              },
+              {
+                "fid": 271514840,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "跨境风格类型",
+                "value": "舒适休闲",
+                "values": [
+                  "舒适休闲"
+                ]
+              },
+              {
+                "fid": 221796513,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "是否跨境货源",
+                "value": "是",
+                "values": [
+                  "是"
+                ]
+              },
+              {
+                "fid": 271512163,
+                "isSpecial": false,
+                "lectotype": false,
+                "name": "主要下游销售地区1",
+                "value": "东南亚",
+                "values": [
+                  "东南亚"
+                ]
+              }
+            ],
+            "imageList": [
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.summ.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg",
+                "searchImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.search.jpg",
+                "size220x220ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.220x220.jpg",
+                "size310x310ImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.310x310.jpg",
+                "summImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.summ.jpg"
+              }
+            ],
+            "leafCategoryId": 303,
+            "leafCategoryName": "棉衣",
+            "mainImageList": [
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg"
+              },
+              {
+                "fullPathImageURI": "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg",
+                "imageURI": "img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg"
+              }
+            ],
+            "offerId": 820187943363,
+            "offerMemberTags": [
+              82945,
+              81921,
+              93185,
+              4306497,
+              52225,
+              38401,
+              210944,
+              4359745,
+              218112,
+              422914,
+              475650,
+              503298,
+              519170,
+              4845121,
+              5219905,
+              5247553,
+              5254209,
+              5254721,
+              4055553,
+              4136449,
+              4134913,
+              4109313,
+              29248,
+              28736,
+              28224,
+              449090,
+              393794,
+              394306,
+              442434,
+              422978,
+              467011,
+              439874,
+              498242,
+              509506,
+              481346,
+              501314,
+              268866,
+              535106,
+              562242,
+              675905,
+              5023233,
+              5032961,
+              4995585,
+              5215745,
+              5303297,
+              5261313,
+              3674177,
+              4001345,
+              4134977,
+              83073,
+              81537,
+              93313,
+              82561,
+              4307649,
+              232064,
+              448642,
+              449154,
+              457346,
+              424578,
+              420994,
+              512642,
+              501378,
+              516738,
+              4503233,
+              473218,
+              500354,
+              340611,
+              587394,
+              562818,
+              5167809,
+              5291713,
+              5253313,
+              5254849,
+              3842177,
+              4135041,
+              209600,
+              235712,
+              399554,
+              4480641,
+              385730,
+              4839041,
+              535234,
+              584387,
+              5110401,
+              5271681,
+              5291137,
+              3056835,
+              3778753,
+              3691713,
+              4055745,
+              3992769,
+              82689,
+              82177,
+              83201,
+              21248,
+              22784,
+              17665,
+              26369,
+              140032,
+              4408641,
+              201984,
+              205056,
+              241408,
+              198400,
+              399106,
+              446722,
+              393986,
+              393474,
+              440066,
+              403714,
+              481538,
+              514818,
+              522498,
+              473346,
+              480002,
+              481026,
+              384259,
+              540930,
+              572162,
+              544514,
+              5095745,
+              5139777,
+              5117249,
+              5261121,
+              5277505,
+              5292353,
+              21312,
+              161600,
+              170816,
+              202048,
+              209216,
+              242496,
+              439106,
+              412482,
+              438594,
+              522562,
+              473410,
+              493378,
+              504641,
+              386370,
+              382274,
+              892225,
+              5056257,
+              5001473,
+              5232385,
+              5210369,
+              5192449,
+              5172481,
+              5277441,
+              5291777,
+              3691841,
+              4135745,
+              81793,
+              93057,
+              28032,
+              4249025,
+              33665,
+              4247489,
+              4413377,
+              220544,
+              216960,
+              201088,
+              4342209,
+              425858,
+              426882,
+              458114,
+              421250,
+              4503489,
+              472962,
+              306562,
+              386434,
+              364930,
+              4798913,
+              4728769,
+              564610,
+              531842,
+              572290,
+              5195201,
+              1100451329,
+              1100442624,
+              1100580864,
+              3705729,
+              3882881,
+              4189569,
+              4134785,
+              153024,
+              139712,
+              170944,
+              210880,
+              393666,
+              412098,
+              414146,
+              493506,
+              270786,
+              339394,
+              564162,
+              564674,
+              5234049,
+              5170049,
+              5117313,
+              5292417,
+              3792321
+            ],
+            "offerSign": {
+              "chtSingleOffer": true,
+              "consignMarketOffer": true,
+              "detailForbidden": false,
+              "distribution": true,
+              "hasBusinessPrice": false,
+              "hasJoinBusinessPrice": false,
+              "hasRelationOffer": false,
+              "offerModelSign": {
+                "isBuyerProtection": true,
+                "isConsignMarketOffer": true,
+                "isCrossBorderOffer": true,
+                "isSupportMix": true,
+                "isOnePsale": true,
+                "isSupplyStockOffer": true,
+                "hasFreightTemplate": true,
+                "isRangePriceSku": true,
+                "isGovCouponOfferInOD": false,
+                "hasSearchPicture": true,
+                "hasWhitePicInOffer": true,
+                "hasOrder": true,
+                "isTbDistributionOffer": true,
+                "isOptimalLogisticsOffer": true,
+                "isAegisTrade": true,
+                "isHtqqItem": true,
+                "isQuickBackSceneOffer": true,
+                "isSearchOffer": true,
+                "isCBDistribution": true,
+                "isGspOffer": true,
+                "isAlipaySupported": true,
+                "isGpfOffer": true,
+                "isWxzfOffer": true,
+                "isDistributionPriceUpgrade": true,
+                "huiyuanhaokaidanyanxuan": true,
+                "isSupportStock": true,
+                "isCUserOutboundRed": true,
+                "isChtOffer": true,
+                "isCreateSupplyProduct": true,
+                "isPopularOffer": true,
+                "hasSendGoodsAddress": true
+              },
+              "offerSupportOnlineTrade": true,
+              "onlyNPorcessingOffer": false,
+              "preSaleOffer": false,
+              "preSell": false,
+              "signs": {
+                "isSkuOffer": true,
+                "isPreSell": false,
+                "isConsignMarketOffer": true,
+                "isOnlyNPorcessingOffer": false,
+                "isOfferSupportOnlineTrade": true,
+                "isDistribution": true,
+                "hasBusinessPrice": false,
+                "hasJoinBusinessPrice": false,
+                "isPreSaleOffer": false,
+                "isVirtualCategory": false,
+                "preHeatOfferCanTrade": true,
+                "isChtSingleOffer": true,
+                "isDetailForbidden": false
+              },
+              "skuOffer": true,
+              "stockProcessingLightOffer": false,
+              "stockReserveLightOffer": false,
+              "virtualCategory": false
+            },
+            "offerSystemAttributes": {
+              "approveDate": 1733304837000,
+              "clientLastOperateDate": 1737540344000,
+              "createDate": 1722331084000,
+              "expireDate": 2048664837000,
+              "modifyDate": 1755401000000,
+              "postDate": 1737540344000,
+              "sellStarts": -28800000,
+              "sellStartsTime": 19700101,
+              "selling": true
+            },
+            "offerType": "fashion",
+            "preHeatStartTime": "1970-01-01 00:00:00",
+            "skuFeatures": {},
+            "skuProps": [
+              {
+                "fid": 3216,
+                "prop": "颜色",
+                "value": [
+                  {
+                    "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg",
+                    "name": "杏色（内里加绒）"
+                  },
+                  {
+                    "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+                    "name": "黑色（内里加绒）"
+                  },
+                  {
+                    "imageUrl": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg",
+                    "name": "粉红色（内里加绒）"
+                  }
+                ]
+              },
+              {
+                "fid": 450,
+                "prop": "尺码",
+                "value": [
+                  {
+                    "name": "M（100斤内）"
+                  },
+                  {
+                    "name": "L（100-115斤）"
+                  },
+                  {
+                    "name": "XL（115-130斤）"
+                  },
+                  {
+                    "name": "2XL（130-150斤）"
+                  }
+                ]
+              }
+            ],
+            "status": "PUBLISHED",
+            "subject": "美式复古小熊刺绣撞色包边棉服男女冬季时尚菱格宽松加厚翻领外套",
+            "topCategoryId": 10166,
+            "wirelessVideo": {
+              "state": 0,
+              "videoId": 0
+            },
+            "xoneMaterial": {}
+          },
+          "promotionModel": {
+            "aggregateNewPromotionInfo": [
+              {
+                "features": {
+                  "calSkuCartFromMkc": "false"
+                },
+                "groupType": "DEFAULT_GROUP",
+                "singlePromotionInfoModels": []
+              }
+            ],
+            "aggregatePromotionInfo": [],
+            "bigPromotionInfo": {
+              "bigPromotionCountdown": -1,
+              "bigPromotionStatus": "NONE",
+              "burstBeginTime": -1,
+              "burstEndTime": -1,
+              "preheatTime": -1,
+              "promotionResources": {}
+            },
+            "endTime": 0,
+            "hotTime": 0,
+            "promotionExtendInfo": {
+              "offerDetailUrgeBarModel": "null"
+            },
+            "promotionExtends": {},
+            "promotionSign": {
+              "cross2buy": false,
+              "freePostage": false,
+              "freshmanActivity": false,
+              "fxOfficialTimeLimitActivity": false,
+              "fxSellerTimeLimitActivity": false,
+              "hasBigPromotion": false,
+              "hasMarketPromotion": false,
+              "hasPurcharseMark": false,
+              "hpAdditionalDiscount": false,
+              "limitedTimePromotion": false,
+              "promotionRemoteCal": false,
+              "shareWithGift": false,
+              "signs": {
+                "isHpAdditionalDiscount": false,
+                "hasBigPromotion": false,
+                "isFreshmanActivity": false,
+                "promotionRemoteCal": false,
+                "skuFixPromotion": false,
+                "isFreePostage": false,
+                "isShareWithGift": false,
+                "isFxSellerTimeLimitActivity": false,
+                "isLimitedTimePromotion": false,
+                "isDisPricePromotion": false,
+                "isFxOfficialTimeLimitActivity": false,
+                "hasPurcharseMark": false,
+                "isFixedPricePromotion": false
+              },
+              "skuFixPromotion": false
+            },
+            "startTime": 0
+          },
+          "sceneBizType": "DEFAULT",
+          "sceneType": "default",
+          "sellerModel": {
+            "companyName": "河南省靓客服装有限公司",
+            "loginId": "靓客服装",
+            "memberId": "db720",
+            "sellerFeature": {
+              "brandShopTypeName": "",
+              "features": {
+                "brandShopTypeName": ""
+              }
+            },
+            "sellerIdentity": "cht",
+            "sellerSign": {
+              "chtMember": false,
+              "industrySeller": false,
+              "signs": {
+                "isIndustrySeller": false,
+                "isSlsj": false,
+                "isChtMember": false,
+                "isTp": true,
+                "isEaseBuyDealer": false,
+                "isFactoryDealer": false
+              },
+              "slsj": false,
+              "tp": true
+            },
+            "sellerWinportUrlMap": {
+              "offerlistUrl": "https://mzzi.1688.com/page/index.html",
+              "contactinfoUrl": "https://mzzi.1688.com/page/contactinfo.html",
+              "creditdetailUrl": "https://mzzi.1688.com/page/creditdetail.html",
+              "indexUrl": "https://mzzi.1688.com/page/index.html",
+              "shopdynamicUrl": "https://mzzi.1688.com/page/shopdynamic.html",
+              "defaultUrl": "https://mzzi.1688.com"
+            },
+            "userId": 994008025,
+            "winportUrl": "https://mzzi.1688.com"
+          },
+          "tradeModel": {
+            "beginAmount": 1,
+            "canBookedAmount": 4952,
+            "disPriceRanges": [
+              {
+                "beginAmount": 1,
+                "discountPrice": "32.00",
+                "endAmount": 0,
+                "price": "32.00"
+              }
+            ],
+            "hasPromotion": false,
+            "maxPrice": "32.00",
+            "minPrice": "32.00",
+            "mixModel": {
+              "mixAmount": 200,
+              "mixNumber": 1,
+              "mixOneForSale": true,
+              "supportMix": true
+            },
+            "offerIDatacenterSellInfo": {
+              "门襟": "单排多扣",
+              "风格类型": "日韩休闲",
+              "主面料成分": "聚酯纤维",
+              "流行元素": "口袋",
+              "衣长": "普通款(50CM<衣长≤65CM)",
+              "版型": "宽松型",
+              "领型": "翻领",
+              "厚薄": "中等",
+              "袖型": "常规袖",
+              "跨境风格类型": "舒适休闲",
+              "sellPointModel": "{\"id\":35,\"name\":\"专业化CPV(15)\",\"show\":\"门襟_单排多扣_algo,风格类型_日韩休闲_algo,主面料成分_聚酯纤维_algo,流行元素_口袋_algo,衣长_普通款(50CM<衣长≤65CM)_algo,版型_宽松型_custom,领型_翻领_algo,厚薄_中等_algo,袖型_常规袖_algo,跨境风格类型_舒适休闲_algo\",\"type\":\"test_idatacenter_sell\"}"
+            },
+            "offerId": 820187943363,
+            "offerPriceModel": {
+              "currentPrices": [
+                {
+                  "beginAmount": 1,
+                  "price": "32.00"
+                }
+              ],
+              "priceDisplayType": "rangePrice"
+            },
+            "priceDisplay": "32.00",
+            "saleCount": 3615,
+            "skuMap": [
+              {
+                "canBookCount": 471,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375199,
+                "specAttrs": "粉红色（内里加绒）&gt;L（100-115斤）",
+                "specId": "9ebfcd0d352ab4cc4cc0ddb6c32bf92c"
+              },
+              {
+                "canBookCount": 324,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375195,
+                "specAttrs": "黑色（内里加绒）&gt;XL（115-130斤）",
+                "specId": "e2705f2de8149549f7abec27c7a0a2dd"
+              },
+              {
+                "canBookCount": 414,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375197,
+                "specAttrs": "杏色（内里加绒）&gt;XL（115-130斤）",
+                "specId": "6fa85f782946baf433380cb706e03364"
+              },
+              {
+                "canBookCount": 478,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375205,
+                "specAttrs": "粉红色（内里加绒）&gt;M（100斤内）",
+                "specId": "21dfd578300ae641db14d0196f4ae620"
+              },
+              {
+                "canBookCount": 350,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375204,
+                "specAttrs": "黑色（内里加绒）&gt;M（100斤内）",
+                "specId": "e2daec09932e90c1d0aecb447f8db052"
+              },
+              {
+                "canBookCount": 310,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375200,
+                "specAttrs": "杏色（内里加绒）&gt;L（100-115斤）",
+                "specId": "0fa3c9afa1a8d08c20a93a84237c7ae4"
+              },
+              {
+                "canBookCount": 387,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5787744479542,
+                "specAttrs": "黑色（内里加绒）&gt;2XL（130-150斤）",
+                "specId": "2ac491bf677709d9c2e7ddafb11e23ce"
+              },
+              {
+                "canBookCount": 544,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5787744479543,
+                "specAttrs": "粉红色（内里加绒）&gt;2XL（130-150斤）",
+                "specId": "e8dc3a01e00628f432892b1d39b33209"
+              },
+              {
+                "canBookCount": 518,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375196,
+                "specAttrs": "粉红色（内里加绒）&gt;XL（115-130斤）",
+                "specId": "933d550b069996a2b4c65aead1f5411a"
+              },
+              {
+                "canBookCount": 273,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375198,
+                "specAttrs": "黑色（内里加绒）&gt;L（100-115斤）",
+                "specId": "253ef2691c5b2500bddfabf43c78dc17"
+              },
+              {
+                "canBookCount": 348,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5777183375206,
+                "specAttrs": "杏色（内里加绒）&gt;M（100斤内）",
+                "specId": "04356bc72ac2e630971a8fa8e85c2b52"
+              },
+              {
+                "canBookCount": 535,
+                "promotionSku": false,
+                "saleCount": 0,
+                "skuId": 5787744479544,
+                "specAttrs": "杏色（内里加绒）&gt;2XL（130-150斤）",
+                "specId": "7d8ab447cb1d1c2e18ec44b0f8eeaf6f"
+              }
+            ],
+            "skuTradeSupported": false,
+            "supportWirelessOnly": false,
+            "tradeWithoutPromotion": {
+              "canBookedAmountOriginal": 4952,
+              "offerBeginAmount": 1,
+              "offerIsSkuTradeSupported": false,
+              "offerMaxPrice": "32.00",
+              "offerMinPrice": "32.00",
+              "offerPriceDisplay": "32.00",
+              "offerPriceRanges": [
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.disPriceRanges[0]"
+                }
+              ],
+              "skuMapOriginal": [
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[0]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[1]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[2]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[3]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[4]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[5]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[6]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[7]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[8]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[9]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[10]"
+                },
+                {
+                  "$ref": "$.result.global.globalData.model.tradeModel.skuMap[11]"
+                }
+              ]
+            },
+            "unit": "件"
+          },
+          "verticalBizType": "DEFAULT",
+          "verticalType": "default"
+        }
+      },
+      "name": "default",
+      "renderData": {},
+      "systemParam": {},
+      "version": "1.0.0"
+    },
+    "hierarchy": {
+      "root": "Root",
+      "structure": {
+        "product": [
+          "shopNavigation",
+          "gallery",
+          "navTabs"
+        ],
+        "Root": [
+          "screen",
+          "bottom"
+        ],
+        "bottom": [
+          "shopProductRecommend",
+          "widgets"
+        ],
+        "screen": [
+          "product",
+          "cart"
+        ],
+        "navTabs": [
+          "chromePlugin",
+          "productEvaluation",
+          "productAttributes",
+          "productWarning",
+          "sizeChart",
+          "productPackInfo",
+          "description"
+        ],
+        "cart": [
+          "productTitle",
+          "sceneKey",
+          "promotionBanner",
+          "mainPrice",
+          "discountCoupon",
+          "userRights",
+          "mainServices",
+          "skuSelection",
+          "customMade",
+          "submitOrder"
+        ]
+      }
+    },
+    "reload": false
+  }
+}

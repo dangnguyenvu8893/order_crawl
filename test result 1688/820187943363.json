@@ -1,0 +1,123 @@
+{
+  "images": [
+    "https://cbu01.alicdn.com/img/ibank/O1CN01l8VXFF299VP8sQXXV_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01ek1PCx299VP9gRLmC_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01VWzX0E299VP8tEPxO_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01oPaC7s299VP64u1uq_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN010YynEU299VP94T4nu_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg"
+  ],
+  "skuProperty": [
+    {
+      "name": "颜色",
+      "values": [
+        {
+          "name": "杏色（内里加绒）",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN011z8X24299VP6ZrGCm_!!994008025-0-cib.jpg"
+        },
+        {
+          "name": "黑色（内里加绒）",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01y34vyX299VP6C7TYm_!!994008025-0-cib.jpg"
+        },
+        {
+          "name": "粉红色（内里加绒）",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01Kybvyf299VP94fZ4z_!!994008025-0-cib.jpg"
+        }
+      ]
+    },
+    {
+      "name": "尺码",
+      "values": [
+        {
+          "name": "M（100斤内）"
+        },
+        {
+          "name": "L（100-115斤）"
+        },
+        {
+          "name": "XL（115-130斤）"
+        },
+        {
+          "name": "2XL（130-150斤）"
+        }
+      ]
+    }
+  ],
+  "sku": [
+    {
+      "canBookCount": "471",
+      "price": "",
+      "specAttrs": "粉红色（内里加绒）|L（100-115斤）"
+    },
+    {
+      "canBookCount": "324",
+      "price": "",
+      "specAttrs": "黑色（内里加绒）|XL（115-130斤）"
+    },
+    {
+      "canBookCount": "414",
+      "price": "",
+      "specAttrs": "杏色（内里加绒）|XL（115-130斤）"
+    },
+    {
+      "canBookCount": "478",
+      "price": "",
+      "specAttrs": "粉红色（内里加绒）|M（100斤内）"
+    },
+    {
+      "canBookCount": "350",
+      "price": "",
+      "specAttrs": "黑色（内里加绒）|M（100斤内）"
+    },
+    {
+      "canBookCount": "310",
+      "price": "",
+      "specAttrs": "杏色（内里加绒）|L（100-115斤）"
+    },
+    {
+      "canBookCount": "387",
+      "price": "",
+      "specAttrs": "黑色（内里加绒）|2XL（130-150斤）"
+    },
+    {
+      "canBookCount": "544",
+      "price": "",
+      "specAttrs": "粉红色（内里加绒）|2XL（130-150斤）"
+    },
+    {
+      "canBookCount": "518",
+      "price": "",
+      "specAttrs": "粉红色（内里加绒）|XL（115-130斤）"
+    },
+    {
+      "canBookCount": "273",
+      "price": "",
+      "specAttrs": "黑色（内里加绒）|L（100-115斤）"
+    },
+    {
+      "canBookCount": "348",
+      "price": "",
+      "specAttrs": "杏色（内里加绒）|M（100斤内）"
+    },
+    {
+      "canBookCount": "535",
+      "price": "",
+      "specAttrs": "杏色（内里加绒）|2XL（130-150斤）"
+    }
+  ],
+  "maxPrice": "32.00",
+  "name": "美式复古小熊刺绣撞色包边棉服男女冬季时尚菱格宽松加厚翻领外套",
+  "sourceId": "820187943363",
+  "sourceType": "1688",
+  "url": "https://detail.1688.com/offer/820187943363.html",
+  "rangePrices": [
+    {
+      "beginAmount": 1,
+      "price": 32.0,
+      "endAmount": 999999,
+      "discountPrice": 32.0
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "images": [
+    "https://cbu01.alicdn.com/img/ibank/O1CN01FAGy2U1Q8RnUHKQhe_!!2215647981931-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01xiyDCK1Q8RnUHJQIv_!!2215647981931-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01HdvSIT1Q8RnTDjTD1_!!2215647981931-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01UxP24w1Q8RnTDk0S2_!!2215647981931-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01qEuNZm1Q8RnSfmkM2_!!2215647981931-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01jhJw7l24tEsinvKmp_!!2215397807448-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01RGucPQ24tEr8Sy9HC_!!2215397807448-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01EJ0LZb24tEsYBNZUp_!!2215397807448-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01Et3J6t24tEsaXuxFM_!!2215397807448-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN01V4bhYD1Q8RnUHX35U_!!2215647981931-0-cib.jpg",
+    "https://cbu01.alicdn.com/img/ibank/O1CN0141BQQ624tEt2dgsKV_!!2215397807448-0-cib.jpg"
+  ],
+  "skuProperty": [
+    {
+      "name": "颜色",
+      "values": [
+        {
+          "name": "白色黑色拉链",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01RGucPQ24tEr8Sy9HC_!!2215397807448-0-cib.jpg"
+        },
+        {
+          "name": "白色拉链",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01Et3J6t24tEsaXuxFM_!!2215397807448-0-cib.jpg"
+        },
+        {
+          "name": "灰色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01V4bhYD1Q8RnUHX35U_!!2215647981931-0-cib.jpg"
+        },
+        {
+          "name": "黑色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01EJ0LZb24tEsYBNZUp_!!2215397807448-0-cib.jpg"
+        },
+        {
+          "name": "粉红色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN01jhJw7l24tEsinvKmp_!!2215397807448-0-cib.jpg"
+        },
+        {
+          "name": "蓝色",
+          "image": "https://cbu01.alicdn.com/img/ibank/O1CN0141BQQ624tEt2dgsKV_!!2215397807448-0-cib.jpg"
+        }
+      ]
+    },
+    {
+      "name": "尺码",
+      "values": [
+        {
+          "name": "S"
+        },
+        {
+          "name": "M"
+        },
+        {
+          "name": "L"
+        },
+        {
+          "name": "XL"
+        },
+        {
+          "name": "XXL"
+        }
+      ]
+    }
+  ],
+  "sku": [
+    {
+      "canBookCount": "9965",
+      "price": "",
+      "specAttrs": "粉红色|L"
+    },
+    {
+      "canBookCount": "9994",
+      "price": "",
+      "specAttrs": "蓝色|S"
+    },
+    {
+      "canBookCount": "9992",
+      "price": "",
+      "specAttrs": "白色拉链|XL"
+    },
+    {
+      "canBookCount": "9970",
+      "price": "",
+      "specAttrs": "粉红色|XL"
+    },
+    {
+      "canBookCount": "9995",
+      "price": "",
+      "specAttrs": "蓝色|XL"
+    },
+    {
+      "canBookCount": "9979",
+      "price": "",
+      "specAttrs": "粉红色|S"
+    },
+    {
+      "canBookCount": "8606",
+      "price": "",
+      "specAttrs": "白色拉链|S"
+    },
+    {
+      "canBookCount": "9963",
+      "price": "",
+      "specAttrs": "黑色|M"
+    },
+    {
+      "canBookCount": "9989",
+      "price": "",
+      "specAttrs": "蓝色|M"
+    },
+    {
+      "canBookCount": "8830",
+      "price": "",
+      "specAttrs": "白色拉链|L"
+    },
+    {
+      "canBookCount": "9999",
+      "price": "",
+      "specAttrs": "蓝色|L"
+    },
+    {
+      "canBookCount": "9267",
+      "price": "",
+      "specAttrs": "白色拉链|M"
+    },
+    {
+      "canBookCount": "9962",
+      "price": "",
+      "specAttrs": "黑色|S"
+    },
+    {
+      "canBookCount": "9907",
+      "price": "",
+      "specAttrs": "灰色|XL"
+    },
+    {
+      "canBookCount": "9932",
+      "price": "",
+      "specAttrs": "粉红色|M"
+    },
+    {
+      "canBookCount": "8936",
+      "price": "",
+      "specAttrs": "灰色|S"
+    },
+    {
+      "canBookCount": "9952",
+      "price": "",
+      "specAttrs": "黑色|L"
+    },
+    {
+      "canBookCount": "9891",
+      "price": "",
+      "specAttrs": "灰色|L"
+    },
+    {
+      "canBookCount": "9162",
+      "price": "",
+      "specAttrs": "灰色|M"
+    },
+    {
+      "canBookCount": "7995",
+      "price": "",
+      "specAttrs": "白色黑色拉链|M"
+    },
+    {
+      "canBookCount": "9194",
+      "price": "",
+      "specAttrs": "白色黑色拉链|L"
+    },
+    {
+      "canBookCount": "9955",
+      "price": "",
+      "specAttrs": "黑色|XL"
+    },
+    {
+      "canBookCount": "9993",
+      "price": "",
+      "specAttrs": "白色拉链|XXL"
+    },
+    {
+      "canBookCount": "8873",
+      "price": "",
+      "specAttrs": "白色黑色拉链|S"
+    },
+    {
+      "canBookCount": "9965",
+      "price": "",
+      "specAttrs": "黑色|XXL"
+    },
+    {
+      "canBookCount": "9930",
+      "price": "",
+      "specAttrs": "白色黑色拉链|XL"
+    },
+    {
+      "canBookCount": "9931",
+      "price": "",
+      "specAttrs": "灰色|XXL"
+    },
+    {
+      "canBookCount": "9995",
+      "price": "",
+      "specAttrs": "蓝色|XXL"
+    },
+    {
+      "canBookCount": "9976",
+      "price": "",
+      "specAttrs": "粉红色|XXL"
+    },
+    {
+      "canBookCount": "9959",
+      "price": "",
+      "specAttrs": "白色黑色拉链|XXL"
+    }
+  ],
+  "maxPrice": "28.00",
+  "name": "【热销】2024跨境欧美 女士套头卫衣四合一夹棉休闲卫衣 拉链卫衣",
+  "sourceId": "837965627870",
+  "sourceType": "1688",
+  "url": "https://detail.1688.com/offer/837965627870.html",
+  "rangePrices": [
+    {
+      "beginAmount": 1,
+      "price": 28.0,
+      "endAmount": 999,
+      "discountPrice": 28.0
+    },
+    {
+      "beginAmount": 1000,
+      "price": 27.0,
+      "endAmount": 999999,
+      "discountPrice": 27.0
+    }
+  ]
+}
