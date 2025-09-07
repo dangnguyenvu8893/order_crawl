@@ -1,7 +1,7 @@
 # Sử dụng Python 3.11 slim image
 FROM python:3.11-slim as base
 
-# Cài đặt các dependencies cần thiết
+# Cài đặt các dependencies cần thiết cho Selenium
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -26,6 +26,8 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libxtst6 \
     xdg-utils \
+    unzip \
+    gpg \
     && rm -rf /var/lib/apt/lists/*
 
 # Tạo thư mục làm việc
@@ -35,18 +37,36 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Cài đặt Playwright browsers với root user
-RUN python -m playwright install chromium
+# Cài đặt Chrome cho Selenium (multi-arch support)
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg && \
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list && \
+        apt-get update && \
+        apt-get install -y google-chrome-stable; \
+    else \
+        # For ARM64, use Chromium instead
+        apt-get update && \
+        apt-get install -y chromium chromium-driver; \
+    fi && \
+    rm -rf /var/lib/apt/lists/*
+
+# Cài đặt ChromeDriver (nếu cần)
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then \
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1-3) && \
+        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}") && \
+        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" && \
+        unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
+        chmod +x /usr/local/bin/chromedriver && \
+        rm /tmp/chromedriver.zip; \
+    else \
+        # Chromium driver đã được cài đặt cùng với chromium package \
+        echo "Chromium driver already installed"; \
+    fi
 
 # Tạo user không phải root và thư mục home
-RUN groupadd -r playwright && useradd -r -g playwright -m -d /home/playwright playwright
-
-# Tạo thư mục cache cho playwright user
-RUN mkdir -p /home/playwright/.cache && chown -R playwright:playwright /home/playwright
-
-# Copy browser binaries từ root cache sang playwright user cache
-RUN cp -r /root/.cache/ms-playwright /home/playwright/.cache/ && \
-    chown -R playwright:playwright /home/playwright/.cache
+RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Copy source code
 COPY . .
@@ -55,10 +75,10 @@ COPY . .
 RUN mkdir -p /app/logs
 
 # Thay đổi ownership của tất cả files
-RUN chown -R playwright:playwright /app
+RUN chown -R appuser:appuser /app
 
-# Chuyển sang user playwright
-USER playwright
+# Chuyển sang user appuser
+USER appuser
 
 # Expose port khớp với Flask app (5001)
 EXPOSE 5001

@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  playwright-service:
+  crawler-service:
     build: .
-    container_name: 1688-playwright-service
+    container_name: order-management-crawler
     ports:
       - "5001:5001"
     environment:
@@ -19,8 +19,8 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - playwright-network
+      - crawler-network
 
 networks:
-  playwright-network:
+  crawler-network:
     driver: bridge

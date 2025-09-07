@@ -8,6 +8,7 @@ import json
 import random
 import pickle
 from parser_1688 import parser_1688
+from parser_pugo import parser_pugo
 
 app = Flask(__name__)
 # Cấu hình Swagger: tắt nút "Try it out" bằng cách vô hiệu hoá submit methods
@@ -567,6 +568,165 @@ def get_cookies_info():
     except Exception as e:
         logger.error(f"Lỗi khi lấy thông tin cookies: {e}")
         return jsonify({"error": str(e)}), 500
+
+# ==================== PUGO.VN ENDPOINTS ====================
+
+@swag_from({
+    'tags': ['extractor'],
+    'summary': 'Extractor Pugo.vn (raw) - theo dõi dữ liệu thô như backend extractor',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=970024185525'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Raw extractor output', 'schema': {'type': 'object'}}}
+})
+@app.route('/extract-pugo', methods=['POST'])
+def route_extract_pugo():
+    try:
+        from py_extractors.extractor_pugo import extractor_pugo
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        result = extractor_pugo.extract(url)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Extractor error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Pugo.vn (chuẩn hoá) - nhận raw JSON từ extractor, trả về format chuẩn',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'raw_data': {
+                    'type': 'object',
+                    'description': 'Raw JSON output từ extractor (có status, url, raw_data, sourceId, ...)',
+                    'example': {
+                        'status': 'success',
+                        'url': 'https://item.taobao.com/item.htm?id=970024185525',
+                        'raw_data': {
+                            'status': 'success',
+                            'data': {
+                                'name': 'Product Name',
+                                'images': ['https://example.com/image1.jpg'],
+                                'price': '100.00'
+                            }
+                        },
+                        'sourceId': '970024185525',
+                        'sourceType': 'pugo'
+                    }
+                }
+            },
+            'required': ['raw_data']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-pugo', methods=['POST'])
+def route_transform_pugo():
+    try:
+        from py_transformers.transformer_pugo import transformer_pugo
+        payload = request.get_json() or {}
+
+        # Chấp nhận 2 dạng body:
+        # 1) { "raw_data": { ... } }  ← chuẩn
+        # 2) Toàn bộ JSON từ extractor (có key "result" ở root)  ← linh hoạt
+        if isinstance(payload, dict) and 'raw_data' in payload:
+            raw_input = payload
+        elif isinstance(payload, dict) and 'status' in payload:
+            raw_input = { 'raw_data': payload }
+        else:
+            return jsonify({'error': 'Body phải là {"raw_data": {...}} hoặc JSON có key "status"'}), 400
+
+        transformed = transformer_pugo.transform(raw_input)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Pugo.vn từ URL (tự động extract + transform)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=970024185525'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-pugo-from-url', methods=['POST'])
+def route_transform_pugo_from_url():
+    try:
+        from py_extractors.extractor_pugo import extractor_pugo
+        from py_transformers.transformer_pugo import transformer_pugo
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        raw = extractor_pugo.extract(url)
+        transformed = transformer_pugo.transform(raw)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['parser'],
+    'summary': 'Parse Pugo.vn API response - parse dữ liệu từ API response',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'response_data': {
+                    'type': 'object',
+                    'description': 'API response data từ pugo.vn',
+                    'example': {
+                        'status': 'success',
+                        'data': {
+                            'name': 'Product Name',
+                            'images': ['https://example.com/image1.jpg'],
+                            'price': '100.00'
+                        }
+                    }
+                }
+            },
+            'required': ['response_data']
+        }
+    }],
+    'responses': {200: {'description': 'Parsed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/parse-pugo', methods=['POST'])
+def route_parse_pugo():
+    try:
+        data = request.get_json() or {}
+        response_data = data.get('response_data')
+        if not response_data:
+            return jsonify({'error': 'response_data is required'}), 400
+        result = parser_pugo.parse_api_response(response_data)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Parser error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 
