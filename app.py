@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flasgger import Swagger, swag_from
-from playwright.sync_api import sync_playwright
+# from playwright.sync_api import sync_playwright  # Removed - using Selenium now
 import time
 import logging
 import os
@@ -112,35 +112,9 @@ def generate_fake_cookies():
     cookies.extend(base_cookies)
     return cookies
 
-def setup_browser():
-    """Thiết lập Playwright browser"""
-    try:
-        playwright = sync_playwright().start()
-
-        # Cấu hình browser
-        browser_args = [
-            '--no-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--window-size=1920,1080',
-            '--disable-blink-features=AutomationControlled',
-            '--disable-extensions',
-            '--disable-plugins',
-            '--no-first-run',
-            '--no-default-browser-check',
-            '--disable-default-apps',
-            '--disable-sync',
-            '--disable-translate'
-        ]
-
-        browser = playwright.chromium.launch(
-            headless=True,
-            args=browser_args
-        )
-        return playwright, browser
-    except Exception as e:
-        logger.error(f"Lỗi khi khởi tạo browser: {e}")
-        return None, None
+# def setup_browser():
+#     """Thiết lập Playwright browser - DISABLED, using Selenium now"""
+#     return None, None
 
 def create_stealth_context(browser, use_saved_cookies=True):
     """Tạo context với stealth mode"""
@@ -330,50 +304,9 @@ def create_stealth_context(browser, use_saved_cookies=True):
 
     return context
 
-def create_session_and_cookies():
-    """Tạo session mới và cookies"""
-    try:
-        playwright, browser = setup_browser()
-        if not browser:
-            return None, None, None
-
-        # Tạo context với stealth mode
-        context = create_stealth_context(browser, use_saved_cookies=False)
-        page = context.new_page()
-
-        # Truy cập trang chủ 1688.com để tạo session
-        logger.info("Đang tạo session mới trên 1688.com...")
-        page.goto("https://www.1688.com/", wait_until='domcontentloaded', timeout=60000)
-        time.sleep(5)
-
-        # Lấy cookies từ session hiện tại
-        cookies = page.context.cookies()
-        logger.info(f"Đã tạo session với {len(cookies)} cookies")
-
-        # Lưu cookies mới
-        save_cookies(cookies)
-
-        # Lưu session info
-        session_info = {
-            'timestamp': time.time(),
-            'cookies_count': len(cookies),
-            'user_agent': page.evaluate("navigator.userAgent"),
-            'viewport': page.evaluate("({width: window.innerWidth, height: window.innerHeight})")
-        }
-
-        sessions = load_sessions()
-        sessions[f"session_{int(time.time())}"] = session_info
-        save_sessions(sessions)
-
-        return playwright, browser, context
-
-    except Exception as e:
-        logger.error(f"Lỗi khi tạo session: {e}")
-        if browser:
-            browser.close()
-        if playwright:
-            playwright.stop()
-        return None, None, None
+# def create_session_and_cookies():
+#     """Tạo session mới và cookies - DISABLED, using Selenium now"""
+#     return None, None, None
 
 def get_page_content(page_content):
     """Lấy thông tin cơ bản về trang web"""
@@ -389,42 +322,12 @@ def get_page_content(page_content):
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "message": "Stealth Playwright service is running"})
+    return jsonify({"status": "healthy", "message": "Order Management Crawler service is running"})
 
-@app.route('/create-session', methods=['POST'])
-def create_new_session():
-    """API endpoint để tạo session mới"""
-    try:
-        logger.info("Bắt đầu tạo session mới...")
-
-        playwright, browser, context = create_session_and_cookies()
-        if not context:
-            return jsonify({"error": "Không thể tạo session"}), 500
-
-        try:
-            # Lấy thông tin session
-            page = context.new_page()
-            page.goto("https://www.1688.com/", wait_until='domcontentloaded', timeout=30000)
-            time.sleep(3)
-
-            session_info = {
-                "status": "success",
-                "message": "Session mới đã được tạo",
-                "cookies_count": len(context.cookies()),
-                "timestamp": time.time()
-            }
-
-            return jsonify(session_info)
-
-        finally:
-            if browser:
-                browser.close()
-            if playwright:
-                playwright.stop()
-
-    except Exception as e:
-        logger.error(f"Lỗi khi tạo session: {e}")
-        return jsonify({"error": str(e)}), 500
+# @app.route('/create-session', methods=['POST'])
+# def create_new_session():
+#     """API endpoint để tạo session mới - DISABLED, using Selenium now"""
+#     return jsonify({"error": "Endpoint disabled - using Selenium now"}), 501
 
 """Loại bỏ route cũ /load-1688-product theo yêu cầu."""
 

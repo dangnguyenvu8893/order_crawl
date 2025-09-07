@@ -51,8 +51,14 @@ class ExtractorPugo:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
+        # Thêm headless và user data dir để tránh conflict
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--user-data-dir=/tmp/chrome-user-data")
+        chrome_options.add_argument("--remote-debugging-port=0")
+        
         # Khởi tạo driver - thử Chrome trước, nếu không có thì dùng Chromium
         try:
+            # Thử với ChromeDriver
             driver = webdriver.Chrome(options=chrome_options)
         except Exception as e:
             logger.warning(f"Chrome driver failed: {e}, trying Chromium...")
@@ -62,7 +68,15 @@ class ExtractorPugo:
                 driver = webdriver.Chrome(options=chrome_options)
             except Exception as e2:
                 logger.error(f"Both Chrome and Chromium failed: {e2}")
-                raise Exception(f"Không thể khởi tạo browser: {e2}")
+                # Thử với service và executable_path
+                try:
+                    from selenium.webdriver.chrome.service import Service
+                    service = Service(executable_path="/usr/bin/chromedriver")
+                    chrome_options.binary_location = "/usr/bin/chromium"
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                except Exception as e3:
+                    logger.error(f"All methods failed: {e3}")
+                    raise Exception(f"Không thể khởi tạo browser: {e3}")
         
         # Enable network domain để monitor requests
         driver.execute_cdp_cmd('Network.enable', {})
@@ -83,7 +97,7 @@ class ExtractorPugo:
             
             # Truy cập trang đăng nhập
             driver.get(self.login_url)
-            time.sleep(3)
+            time.sleep(1)
             
             # Tìm và điền email
             email_input = WebDriverWait(driver, 10).until(
@@ -105,7 +119,7 @@ class ExtractorPugo:
             logger.info("Đã click nút đăng nhập")
             
             # Chờ đăng nhập hoàn tất (pugo.vn cần 5s để chuyển màn hình)
-            time.sleep(8)
+            time.sleep(4)
             
             # Kiểm tra xem đăng nhập có thành công không
             current_url = driver.current_url
@@ -150,7 +164,7 @@ class ExtractorPugo:
             
             # Truy cập trang search
             driver.get("https://pugo.vn/backend/search")
-            time.sleep(3)
+            time.sleep(1)
             
             # Tìm input search
             search_input = WebDriverWait(driver, 10).until(
@@ -191,47 +205,71 @@ class ExtractorPugo:
                     "response_status": 404
                 }
             
-            # Chờ kết quả
-            time.sleep(5)
-            
-            # Lấy kết quả từ network requests
-            logger.info("Lấy kết quả từ network requests...")
-            
-            # Monitor network requests để lấy response
-            logs = driver.get_log('performance')
+            # Chờ kết quả với loop 1s x 10 lần
+            logger.info("Chờ kết quả từ API...")
             api_responses = []
             
-            for log in logs:
-                message = json.loads(log['message'])
+            for attempt in range(10):
+                logger.info(f"Lần thử {attempt + 1}/10...")
+                time.sleep(1)
                 
-                # Lấy response data
-                if message['message']['method'] == 'Network.responseReceived':
-                    response = message['message']['params']['response']
-                    url = response['url']
+                # Lấy kết quả từ network requests
+                logs = driver.get_log('performance')
+                
+                for log in logs:
+                    message = json.loads(log['message'])
                     
-                    if '/item/detail' in url:
-                        request_id = message['message']['params']['requestId']
-                        logger.info(f"Tìm thấy API response: {url}")
+                    # Lấy response data
+                    if message['message']['method'] == 'Network.responseReceived':
+                        response = message['message']['params']['response']
+                        url = response['url']
                         
-                        # Lấy response body
-                        try:
-                            response_body = driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
-                            if response_body and 'body' in response_body:
-                                response_data = json.loads(response_body['body'])
-                                api_responses.append(response_data)
-                                logger.info(f"Đã lấy được response data: {response_data}")
-                        except Exception as e:
-                            logger.warning(f"Không lấy được response body: {e}")
+                        if '/item/detail' in url:
+                            request_id = message['message']['params']['requestId']
+                            logger.info(f"Tìm thấy API response: {url}")
+                            
+                            # Lấy response body
+                            try:
+                                response_body = driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
+                                if response_body and 'body' in response_body:
+                                    response_data = json.loads(response_body['body'])
+                                    
+                                    # Kiểm tra xem response có hợp lệ không
+                                    if response_data.get('success') and response_data.get('data', {}).get('data'):
+                                        logger.info(f"Tìm thấy API response hợp lệ ở lần thử {attempt + 1}")
+                                        return {
+                                            "status": "success",
+                                            "data": response_data,
+                                            "method": "network_monitoring",
+                                            "response_status": 200
+                                        }
+                                    else:
+                                        api_responses.append(response_data)
+                                        logger.info(f"Response chưa hợp lệ, tiếp tục thử...")
+                            except Exception as e:
+                                logger.warning(f"Không lấy được response body: {e}")
+                
+                # Nếu tìm thấy response (dù chưa hợp lệ), tiếp tục thử
+                if api_responses:
+                    logger.info(f"Tìm thấy {len(api_responses)} responses, tiếp tục thử...")
             
+            # Nếu sau 10 lần thử vẫn không có response hợp lệ
             if api_responses:
-                # Lấy response cuối cùng (thường là response chính)
-                latest_response = api_responses[-1]
-                logger.info("Đã lấy được response data từ network requests")
+                logger.warning(f"Sau 10 lần thử, chỉ tìm thấy {len(api_responses)} responses không hợp lệ")
                 return {
-                    "status": "success",
-                    "data": latest_response,
+                    "status": "partial_success",
+                    "data": api_responses[-1],  # Lấy response cuối cùng
                     "method": "network_monitoring",
-                    "response_status": 200
+                    "response_status": 200,
+                    "message": "Response không hoàn toàn hợp lệ"
+                }
+            else:
+                logger.error("Sau 10 lần thử, không tìm thấy API response")
+                return {
+                    "status": "error",
+                    "message": "Không tìm thấy API response sau 10 lần thử",
+                    "method": "network_monitoring",
+                    "response_status": 404
                 }
             
             # Fallback: Thử lấy từ JavaScript response
