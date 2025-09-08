@@ -1,0 +1,318 @@
+{
+  "success": true,
+  "code": null,
+  "message": "SUCCESS",
+  "data": {
+      "id": 0,
+      "productId": "957351219543",
+      "name": "平湖25冬季新款韩版白鸭绒羽绒服中长款过膝棉服外套品牌女装批发",
+      "nameTranslate": null,
+      "rate": 3810,
+      "itemUrl": "https://detail.1688.com/offer/957351219543.html",
+      "shopId": "2220144947665",
+      "shopName": "广州天鸽服饰",
+      "shopUrl": null,
+      "sellerLevelIcon": null,
+      "sellerStart": null,
+      "sellerNick": null,
+      "sellerUrl": null,
+      "website": "CN1688",
+      "startPrice": 33.8,
+      "sellPrice": 33.8,
+      "startPriceVND": 128778,
+      "sellPriceVND": 128778,
+      "startPriceDisplay": 128777.99999999999,
+      "sellPriceDisplay": 128777.99999999999,
+      "stock": 9999999,
+      "transaction": 0,
+      "repurchaseRate": 0.0,
+      "image": "https://img.alicdn.com/img/ibank/O1CN01jWnq5o26UcvDPRswf_!!2220144947665-0-cib.jpg",
+      "imageThumb": "https://img.alicdn.com/img/ibank/O1CN01jWnq5o26UcvDPRswf_!!2220144947665-0-cib.jpg",
+      "imgThumbs": [
+          "https://img.alicdn.com/img/ibank/O1CN01M7uAZT26UcvChegs8_!!2220144947665-0-cib.jpg",
+          "https://img.alicdn.com/img/ibank/O1CN01TTk7sL26UcvDwRtUx_!!2220144947665-0-cib.jpg",
+          "https://img.alicdn.com/img/ibank/O1CN01y67POR26UcvtZqK7F_!!2220144947665-0-cib.jpg",
+          "https://img.alicdn.com/img/ibank/O1CN019eaFqT26UcvDN6DLX_!!2220144947665-0-cib.jpg",
+          "https://img.alicdn.com/img/ibank/O1CN01jWnq5o26UcvDPRswf_!!2220144947665-0-cib.jpg"
+      ],
+      "skuMaps": [
+          {
+              "skuMap": "多种颜色;多个码数",
+              "propPath": null,
+              "skuId": "662a2e5d37430bcc8d85e4c09efc92f0",
+              "canBookCount": 9999999,
+              "saleCount": 0,
+              "price": 0.0,
+              "discountPrice": 33.8
+          }
+      ],
+      "skuMapsAvailable": null,
+      "itemPropertys": [
+          {
+              "type": "COLOR",
+              "id": null,
+              "title": "颜色",
+              "name": "颜色",
+              "nameTranslate": null,
+              "childPropertys": [
+                  {
+                      "title": "多种颜色",
+                      "titleTranslate": "多种颜色",
+                      "properties": "多种颜色",
+                      "image": "https://img.alicdn.com/img/ibank/O1CN01DVTCI626UcvER6g0C_!!2220144947665-0-cib.jpg",
+                      "bigImage": "https://img.alicdn.com/img/ibank/O1CN01DVTCI626UcvER6g0C_!!2220144947665-0-cib.jpg",
+                      "price": 0.0,
+                      "skuId": null
+                  }
+              ]
+          },
+          {
+              "type": "SIZE",
+              "id": null,
+              "title": "尺码",
+              "name": "尺码",
+              "nameTranslate": null,
+              "childPropertys": [
+                  {
+                      "title": "多个码数",
+                      "titleTranslate": "多个码数",
+                      "properties": "多个码数",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  }
+              ]
+          }
+      ],
+      "wholesales": [
+          {
+              "begin": 10,
+              "end": 99,
+              "price": 33.8
+          },
+          {
+              "begin": 100,
+              "end": 0,
+              "price": 33.0
+          }
+      ],
+      "aliwangwang": "广州天鸽服饰",
+      "dataItem": null,
+      "dataJson": null,
+      "errorCode": null,
+      "freightWeight": 0.0,
+      "strErrorCode": null,
+      "detailProperties": [
+          {
+              "name": "厚薄",
+              "value": "厚",
+              "nameTranslate": "厚薄",
+              "valueTranslate": "厚"
+          },
+          {
+              "name": "袖长",
+              "value": "长袖",
+              "nameTranslate": "袖长",
+              "valueTranslate": "长袖"
+          },
+          {
+              "name": "主要下游销售地区2",
+              "value": "欧美",
+              "nameTranslate": "主要下游销售地区2",
+              "valueTranslate": "欧美"
+          },
+          {
+              "name": "品牌",
+              "value": "其他",
+              "nameTranslate": "品牌",
+              "valueTranslate": "其他"
+          },
+          {
+              "name": "含绒量",
+              "value": "51%~55%",
+              "nameTranslate": "含绒量",
+              "valueTranslate": "51%~55%"
+          },
+          {
+              "name": "是否可脱卸",
+              "value": "可脱卸",
+              "nameTranslate": "是否可脱卸",
+              "valueTranslate": "可脱卸"
+          },
+          {
+              "name": "尺码",
+              "value": "多个码数",
+              "nameTranslate": "尺码",
+              "valueTranslate": "多个码数"
+          },
+          {
+              "name": "是否有毛领",
+              "value": "无毛领",
+              "nameTranslate": "是否有毛领",
+              "valueTranslate": "无毛领"
+          },
+          {
+              "name": "衣长",
+              "value": "长款(80cm<衣长≤100cm)",
+              "nameTranslate": "衣长",
+              "valueTranslate": "长款(80cm<衣长≤100cm)"
+          },
+          {
+              "name": "颜色",
+              "value": "多种颜色",
+              "nameTranslate": "颜色",
+              "valueTranslate": "多种颜色"
+          },
+          {
+              "name": "适用性别",
+              "value": "女",
+              "nameTranslate": "适用性别",
+              "valueTranslate": "女"
+          },
+          {
+              "name": "主面料成分含量",
+              "value": "30%（含）-50%（不含）",
+              "nameTranslate": "主面料成分含量",
+              "valueTranslate": "30%（含）-50%（不含）"
+          },
+          {
+              "name": "货号",
+              "value": "羽绒服女",
+              "nameTranslate": "货号",
+              "valueTranslate": "羽绒服女"
+          },
+          {
+              "name": "袖型",
+              "value": "常规袖",
+              "nameTranslate": "袖型",
+              "valueTranslate": "常规袖"
+          },
+          {
+              "name": "主面料成分2含量",
+              "value": "80%（含）-90%（不含）",
+              "nameTranslate": "主面料成分2含量",
+              "valueTranslate": "80%（含）-90%（不含）"
+          },
+          {
+              "name": "版型",
+              "value": "宽松型",
+              "nameTranslate": "版型",
+              "valueTranslate": "宽松型"
+          },
+          {
+              "name": "充绒量",
+              "value": "101-200克",
+              "nameTranslate": "充绒量",
+              "valueTranslate": "101-200克"
+          },
+          {
+              "name": "风格类型",
+              "value": "日韩休闲",
+              "nameTranslate": "风格类型",
+              "valueTranslate": "日韩休闲"
+          },
+          {
+              "name": "面料名称",
+              "value": "涤纶",
+              "nameTranslate": "面料名称",
+              "valueTranslate": "涤纶"
+          },
+          {
+              "name": "填充物",
+              "value": "白鸭绒",
+              "nameTranslate": "填充物",
+              "valueTranslate": "白鸭绒"
+          },
+          {
+              "name": "门襟",
+              "value": "拉链",
+              "nameTranslate": "门襟",
+              "valueTranslate": "拉链"
+          },
+          {
+              "name": "跨境风格类型",
+              "value": "舒适休闲",
+              "nameTranslate": "跨境风格类型",
+              "valueTranslate": "舒适休闲"
+          },
+          {
+              "name": "适用年龄段",
+              "value": "成人",
+              "nameTranslate": "适用年龄段",
+              "valueTranslate": "成人"
+          },
+          {
+              "name": "主面料成分2",
+              "value": "涤纶（聚酯纤维）",
+              "nameTranslate": "主面料成分2",
+              "valueTranslate": "涤纶（聚酯纤维）"
+          },
+          {
+              "name": "领型",
+              "value": "立领",
+              "nameTranslate": "领型",
+              "valueTranslate": "立领"
+          },
+          {
+              "name": "主要下游销售地区1",
+              "value": "欧美",
+              "nameTranslate": "主要下游销售地区1",
+              "valueTranslate": "欧美"
+          },
+          {
+              "name": "上市年份/季节",
+              "value": "2025年冬季",
+              "nameTranslate": "上市年份/季节",
+              "valueTranslate": "2025年冬季"
+          },
+          {
+              "name": "产品类别",
+              "value": "羽绒服",
+              "nameTranslate": "产品类别",
+              "valueTranslate": "羽绒服"
+          },
+          {
+              "name": "是否跨境货源",
+              "value": "是",
+              "nameTranslate": "是否跨境货源",
+              "valueTranslate": "是"
+          },
+          {
+              "name": "风格",
+              "value": "韩系风",
+              "nameTranslate": "风格",
+              "valueTranslate": "韩系风"
+          },
+          {
+              "name": "主面料成分",
+              "value": "涤纶（聚酯纤维）",
+              "nameTranslate": "主面料成分",
+              "valueTranslate": "涤纶（聚酯纤维）"
+          },
+          {
+              "name": "绒子含量",
+              "value": "66%~70%",
+              "nameTranslate": "绒子含量",
+              "valueTranslate": "66%~70%"
+          },
+          {
+              "name": "流行元素",
+              "value": "口袋",
+              "nameTranslate": "流行元素",
+              "valueTranslate": "口袋"
+          }
+      ],
+      "detailContent": "<div id=\"offer-template-0\"></div><p><img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01jCI9zM26Ucui7wROg_!!2220144947665-0-cib.jpg\"/></p><p style=\"text-align: center;\"><span style=\"font-size: 26.0pt;\">备注：我们尾货货品流动快，链接只作为定金引流价格，需要加经理补齐尾款再发货的。100件起批，不齐数量不发货，没有联系客服，私拍不发货</span></p><p style=\"text-align: center;\">&nbsp;</p><p style=\"text-align: center;\"><img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01nyaDtr26UcvDfoxJ5_!!2220144947665-0-cib.jpg\" alt=\"16 (5).jpg\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><img src=\"https://cbu01.alicdn.com/img/ibank/O1CN016OrSpI26UcvDelRJP_!!2220144947665-0-cib.jpg\" alt=\"16 (4).jpg\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01FncVeH26UcvEOoqtN_!!2220144947665-0-cib.jpg\" alt=\"16 (3).jpg\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01LyY7s726UcvChe9ad_!!2220144947665-0-cib.jpg\" alt=\"16 (2).jpg\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01kQ7xCI26UcvF58i5L_!!2220144947665-0-cib.jpg\" alt=\"16 (1).jpg\"/><br class=\"img-brk\"/><br class=\"img-brk\"/>&nbsp;<br class=\"img-brk\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><br class=\"img-brk\"/><br class=\"img-brk\"/></p>",
+      "saleLocation": null,
+      "isDetailContent": false,
+      "transalated": false,
+      "categoryId": "1034162",
+      "categoryName": null,
+      "complete": false,
+      "priceDisplay": null,
+      "soldCount": null,
+      "sourceCrawl": null,
+      "dataItemPrice": null
+  }
+}

@@ -2,6 +2,8 @@ import re
 import json
 import time
 import logging
+import os
+import pickle
 from typing import Dict, Any, Optional, Tuple
 
 # Import Selenium
@@ -24,6 +26,14 @@ class ExtractorPugo:
         self.email = "vudn8893@gmail.com"
         self.password = "Acd@123123"
         
+        # Đường dẫn lưu trữ session
+        self.session_dir = "/app/logs/sessions"
+        self.cookies_file = os.path.join(self.session_dir, "pugo_cookies.pkl")
+        self.session_file = os.path.join(self.session_dir, "pugo_session.pkl")
+        
+        # Tạo thư mục session nếu chưa có
+        os.makedirs(self.session_dir, exist_ok=True)
+        
     def can_handle(self, url: str) -> bool:
         """Kiểm tra xem URL có thể được xử lý bởi pugo.vn extractor không"""
         # Chấp nhận URL pugo.vn, Taobao, 1688, Tmall (vì pugo.vn có thể xử lý các URL này)
@@ -31,6 +41,98 @@ class ExtractorPugo:
                    re.search(r"item\.taobao\.com", url) or 
                    re.search(r"detail\.1688\.com", url) or
                    re.search(r"detail\.tmall\.com", url))
+    
+    def save_cookies(self, cookies: list) -> None:
+        """Lưu cookies vào file"""
+        try:
+            with open(self.cookies_file, 'wb') as f:
+                pickle.dump(cookies, f)
+            logger.info(f"Đã lưu {len(cookies)} cookies vào {self.cookies_file}")
+        except Exception as e:
+            logger.error(f"Lỗi khi lưu cookies: {e}")
+    
+    def load_cookies(self) -> Optional[list]:
+        """Load cookies từ file"""
+        try:
+            if os.path.exists(self.cookies_file):
+                with open(self.cookies_file, 'rb') as f:
+                    cookies = pickle.load(f)
+                logger.info(f"Đã load {len(cookies)} cookies từ {self.cookies_file}")
+                return cookies
+        except Exception as e:
+            logger.error(f"Lỗi khi load cookies: {e}")
+        return None
+    
+    def save_session(self, session_data: dict) -> None:
+        """Lưu thông tin session"""
+        try:
+            session_data['timestamp'] = time.time()
+            with open(self.session_file, 'wb') as f:
+                pickle.dump(session_data, f)
+            logger.info(f"Đã lưu session vào {self.session_file}")
+        except Exception as e:
+            logger.error(f"Lỗi khi lưu session: {e}")
+    
+    def load_session(self) -> Optional[dict]:
+        """Load thông tin session"""
+        try:
+            if os.path.exists(self.session_file):
+                with open(self.session_file, 'rb') as f:
+                    session_data = pickle.load(f)
+                
+                # Kiểm tra session có còn hợp lệ không (24 giờ)
+                if time.time() - session_data.get('timestamp', 0) < 86400:
+                    logger.info(f"Đã load session hợp lệ từ {self.session_file}")
+                    return session_data
+                else:
+                    logger.info("Session đã hết hạn")
+        except Exception as e:
+            logger.error(f"Lỗi khi load session: {e}")
+        return None
+    
+    def is_session_valid(self) -> bool:
+        """Kiểm tra session có còn hợp lệ không"""
+        session = self.load_session()
+        if not session:
+            return False
+        
+        # Kiểm tra thời gian (24 giờ)
+        if time.time() - session.get('timestamp', 0) > 86400:
+            return False
+        
+        # Kiểm tra cookies có tồn tại không
+        cookies = self.load_cookies()
+        if not cookies:
+            return False
+        
+        return True
+    
+    def clear_session(self) -> None:
+        """Xóa session và cookies đã lưu"""
+        try:
+            if os.path.exists(self.cookies_file):
+                os.remove(self.cookies_file)
+                logger.info(f"Đã xóa cookies file: {self.cookies_file}")
+            
+            if os.path.exists(self.session_file):
+                os.remove(self.session_file)
+                logger.info(f"Đã xóa session file: {self.session_file}")
+                
+        except Exception as e:
+            logger.error(f"Lỗi khi xóa session: {e}")
+    
+    def get_session_info(self) -> dict:
+        """Lấy thông tin session hiện tại"""
+        session = self.load_session()
+        cookies = self.load_cookies()
+        
+        return {
+            'session_exists': session is not None,
+            'cookies_exists': cookies is not None,
+            'session_valid': self.is_session_valid(),
+            'session_age': time.time() - session.get('timestamp', 0) if session else 0,
+            'cookies_count': len(cookies) if cookies else 0
+        }
     
     def _setup_browser(self):
         """Thiết lập Selenium browser"""
@@ -90,8 +192,36 @@ class ExtractorPugo:
     def _login_to_pugo(self, driver) -> Tuple[bool, str, str]:
         """
         Đăng nhập vào pugo.vn và trả về sign header và cookie
+        Trước tiên thử load session đã lưu, nếu không có thì đăng nhập mới
         Returns: (success, sign_header, cookie_string)
         """
+        # Thử load session đã lưu trước
+        if self.is_session_valid():
+            logger.info("Sử dụng session đã lưu...")
+            cookies = self.load_cookies()
+            if cookies:
+                # Load cookies vào browser
+                driver.get("https://pugo.vn/")
+                for cookie in cookies:
+                    try:
+                        driver.add_cookie(cookie)
+                    except Exception as e:
+                        logger.warning(f"Không thể thêm cookie: {e}")
+                
+                # Test session bằng cách truy cập trang cần đăng nhập
+                driver.get("https://pugo.vn/backend/search")
+                time.sleep(2)
+                
+                # Kiểm tra xem có cần đăng nhập lại không
+                if "dang-nhap" not in driver.current_url:
+                    logger.info("Session vẫn hợp lệ, không cần đăng nhập lại")
+                    session = self.load_session()
+                    return True, session.get('sign_header', ''), session.get('cookie_string', '')
+                else:
+                    logger.info("Session không còn hợp lệ, cần đăng nhập lại")
+        
+        # Đăng nhập mới nếu không có session hoặc session không hợp lệ
+        logger.info("Bắt đầu đăng nhập mới...")
         try:
             logger.info("Bắt đầu đăng nhập vào pugo.vn...")
             
@@ -144,6 +274,16 @@ class ExtractorPugo:
                     logger.info(f"Đã lấy được sign header: {sign_header[:50]}...")
                 else:
                     logger.warning("Không tìm thấy sign header")
+                
+                # Lưu session và cookies
+                session_data = {
+                    'sign_header': sign_header or "",
+                    'cookie_string': cookie_string,
+                    'login_time': time.time(),
+                    'user_agent': driver.execute_script("return navigator.userAgent")
+                }
+                self.save_session(session_data)
+                self.save_cookies(cookies)
                 
                 return True, sign_header or "", cookie_string
             else:
@@ -233,19 +373,13 @@ class ExtractorPugo:
                                 response_body = driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
                                 if response_body and 'body' in response_body:
                                     response_data = json.loads(response_body['body'])
-                                    
-                                    # Kiểm tra xem response có hợp lệ không
-                                    if response_data.get('success') and response_data.get('data', {}).get('data'):
-                                        logger.info(f"Tìm thấy API response hợp lệ ở lần thử {attempt + 1}")
-                                        return {
-                                            "status": "success",
-                                            "data": response_data,
-                                            "method": "network_monitoring",
-                                            "response_status": 200
-                                        }
-                                    else:
-                                        api_responses.append(response_data)
-                                        logger.info(f"Response chưa hợp lệ, tiếp tục thử...")
+                                    logger.info(f"Tìm thấy API response (trả ngay) ở lần thử {attempt + 1}")
+                                    return {
+                                        "status": "success",
+                                        "data": response_data,
+                                        "method": "network_monitoring",
+                                        "response_status": 200
+                                    }
                             except Exception as e:
                                 logger.warning(f"Không lấy được response body: {e}")
                 

@@ -24,7 +24,21 @@ app.config['SWAGGER'] = {
         'displayOperationId': True
     }
 }
-swagger = Swagger(app)
+# Đổi đường dẫn Swagger UI từ /apidocs sang /swagger
+swagger = Swagger(app, config={
+    'headers': [],
+    'specs': [
+        {
+            'endpoint': 'apispec_1',
+            'route': '/apispec_1.json',
+            'rule_filter': lambda rule: True,
+            'model_filter': lambda tag: True,
+        }
+    ],
+    'static_url_path': '/flasgger_static',
+    'swagger_ui': True,
+    'specs_route': '/swagger'
+})
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
@@ -332,6 +346,38 @@ def health_check():
 """Loại bỏ route cũ /load-1688-product theo yêu cầu."""
 
 """Loại bỏ route cũ /enhanced-crawl-1688 theo yêu cầu."""
+
+@app.route('/pugo-session-info', methods=['GET'])
+def pugo_session_info():
+    """Lấy thông tin session pugo.vn hiện tại"""
+    try:
+        from py_extractors.extractor_pugo import ExtractorPugo
+        extractor = ExtractorPugo()
+        session_info = extractor.get_session_info()
+        
+        return jsonify({
+            "status": "success",
+            "session_info": session_info
+        })
+    except Exception as e:
+        logger.error(f"Lỗi khi lấy thông tin session: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/pugo-clear-session', methods=['POST'])
+def pugo_clear_session():
+    """Xóa session pugo.vn hiện tại"""
+    try:
+        from py_extractors.extractor_pugo import ExtractorPugo
+        extractor = ExtractorPugo()
+        extractor.clear_session()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Đã xóa session và cookies"
+        })
+    except Exception as e:
+        logger.error(f"Lỗi khi xóa session: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @swag_from({
     'tags': ['extractor'],

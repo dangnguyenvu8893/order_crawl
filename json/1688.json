@@ -1,0 +1,74 @@
+{
+  "images": [
+      "https://cbu01.alicdn.com/img/ibank/O1CN01jWnq5o26UcvDPRswf_!!2220144947665-0-cib.jpg",
+      "https://cbu01.alicdn.com/img/ibank/O1CN019eaFqT26UcvDN6DLX_!!2220144947665-0-cib.jpg",
+      "https://cbu01.alicdn.com/img/ibank/O1CN01y67POR26UcvtZqK7F_!!2220144947665-0-cib.jpg",
+      "https://cbu01.alicdn.com/img/ibank/O1CN01TTk7sL26UcvDwRtUx_!!2220144947665-0-cib.jpg",
+      "https://cbu01.alicdn.com/img/ibank/O1CN01M7uAZT26UcvChegs8_!!2220144947665-0-cib.jpg",
+      "https://cbu01.alicdn.com/img/ibank/O1CN01DVTCI626UcvER6g0C_!!2220144947665-0-cib.jpg"
+  ],
+  "maxPrice": "33.80",
+  "name": "平湖25冬季新款韩版白鸭绒羽绒服中长款过膝棉服外套品牌女装批发",
+  "properties": [
+      {
+          "name": "颜色",
+          "values": [
+              {
+                  "image": "https://cbu01.alicdn.com/img/ibank/O1CN01DVTCI626UcvER6g0C_!!2220144947665-0-cib.jpg",
+                  "name": "多种颜色"
+              }
+          ]
+      },
+      {
+          "name": "尺码",
+          "values": [
+              {
+                  "name": "多个码数"
+              }
+          ]
+      }
+  ],
+  "rangePrices": [
+      {
+          "beginAmount": 50,
+          "discountPrice": 33.8,
+          "endAmount": 99,
+          "price": 33.8
+      },
+      {
+          "beginAmount": 100,
+          "discountPrice": 33.0,
+          "endAmount": 999999,
+          "price": 33.0
+      }
+  ],
+  "sku": [
+      {
+          "canBookCount": "9999999",
+          "price": "",
+          "specAttrs": "多种颜色|多个码数"
+      }
+  ],
+  "skuProperty": [
+      {
+          "name": "颜色",
+          "values": [
+              {
+                  "image": "https://cbu01.alicdn.com/img/ibank/O1CN01DVTCI626UcvER6g0C_!!2220144947665-0-cib.jpg",
+                  "name": "多种颜色"
+              }
+          ]
+      },
+      {
+          "name": "尺码",
+          "values": [
+              {
+                  "name": "多个码数"
+              }
+          ]
+      }
+  ],
+  "sourceId": "957351219543",
+  "sourceType": "1688",
+  "url": "https://detail.1688.com/offer/957351219543.html?offerId=957351219543&spm=a260k.home2025.recommendpart.17"
+}

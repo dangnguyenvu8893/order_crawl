@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+import re
 
 
 class TransformerPugo:
@@ -16,6 +17,48 @@ class TransformerPugo:
             return cur
         except Exception:
             return default
+
+    def detect_source_type(self, url: str) -> str:
+        """Xác định source type thực tế từ URL"""
+        if not url:
+            return 'pugo'
+        
+        url_lower = url.lower()
+        
+        # Kiểm tra Tmall trước (dựa trên parameters trong URL)
+        # Tmall thường có spm=a21bo.tmall hoặc domain tmall.com
+        if 'spm=a21bo.tmall' in url_lower or 'tmall' in url_lower:
+            return 'tmall'
+        
+        # Mapping các domain patterns - sắp xếp theo độ ưu tiên (specific trước general)
+        source_patterns = [
+            # 1688 patterns
+            ('1688', [
+                r'detail\.1688\.com',
+                r'offer\.1688\.com',
+                r'1688\.com'
+            ]),
+            # Taobao patterns
+            ('taobao', [
+                r'item\.taobao\.com',
+                r'taobao\.com'
+            ]),
+            # Pinduoduo patterns
+            ('pinduoduo', [
+                r'yangkeduo\.com',
+                r'pinduoduo\.com',
+                r'pdd\.cn'
+            ])
+        ]
+        
+        # Kiểm tra từng source theo thứ tự ưu tiên
+        for source, patterns in source_patterns:
+            for pattern in patterns:
+                if re.search(pattern, url_lower):
+                    return source
+        
+        # Nếu không match pattern nào, trả về pugo
+        return 'pugo'
 
     def extract_images(self, data: Dict) -> List[str]:
         """Trích xuất danh sách hình ảnh"""
@@ -45,14 +88,26 @@ class TransformerPugo:
                         images.append(img)
                 if images:
                     break
-        
+
+        # Fallback: imgThumbs và image phổ biến trong pugo
+        if not images:
+            thumbs = data.get('imgThumbs') or self.get_nested(data, 'data.imgThumbs', [])
+            if isinstance(thumbs, list):
+                for t in thumbs:
+                    if isinstance(t, str):
+                        images.append(t)
+        if not images:
+            main_img = data.get('image') or self.get_nested(data, 'data.image')
+            if isinstance(main_img, str):
+                images.append(main_img)
+
         return images
 
     def extract_sku_props(self, data: Dict) -> List[Dict[str, Any]]:
-        """Trích xuất thông tin SKU properties"""
-        out = []
-        
-        # Thử các đường dẫn khác nhau cho SKU properties
+        """Trích xuất SKU properties theo schema của transformer_1688."""
+        out: List[Dict[str, Any]] = []
+
+        # 1) Map trực tiếp từ các cấu trúc skuProperties (nếu có)
         sku_paths = [
             'data.skuProperties',
             'data.product.skuProperties',
@@ -61,46 +116,63 @@ class TransformerPugo:
             'product.skuProperties',
             'item.skuProperties'
         ]
-        
+
         for path in sku_paths:
             sku_props = self.get_nested(data, path, [])
             if isinstance(sku_props, list) and sku_props:
                 for prop in sku_props:
-                    if isinstance(prop, dict):
-                        prop_name = prop.get('name') or prop.get('propertyName') or prop.get('prop')
-                        if prop_name:
-                            values = []
-                            prop_values = prop.get('values', [])
-                            if isinstance(prop_values, list):
-                                for v in prop_values:
-                                    if isinstance(v, dict):
-                                        value_name = v.get('name') or v.get('valueName') or v.get('value')
-                                        if value_name:
-                                            value_item = {'name': value_name}
-                                            # Thêm hình ảnh nếu có
-                                            for img_key in ['image', 'imageUrl', 'img']:
-                                                if img_key in v:
-                                                    value_item['image'] = v[img_key]
-                                                    break
-                                            values.append(value_item)
-                                    elif isinstance(v, str):
-                                        values.append({'name': v})
-                            
-                            if values:
-                                out.append({
-                                    'name': prop_name,
-                                    'values': values
-                                })
+                    if not isinstance(prop, dict):
+                        continue
+                    name = prop.get('name') or prop.get('propertyName') or prop.get('prop') or ''
+                    if not name:
+                        continue
+                    values: List[Dict[str, Any]] = []
+                    prop_values = prop.get('values') or prop.get('value') or []
+                    if isinstance(prop_values, list):
+                        for v in prop_values:
+                            if isinstance(v, dict):
+                                item = {'name': v.get('name') or v.get('valueName') or v.get('value') or ''}
+                                # giữ đồng nhất key 'image' như 1688
+                                for img_key in ['image', 'imageUrl', 'img']:
+                                    if v.get(img_key):
+                                        item['image'] = v.get(img_key)
+                                        break
+                                values.append(item)
+                            elif isinstance(v, str):
+                                values.append({'name': v})
+                    if values:
+                        out.append({'name': name, 'values': values})
                 if out:
                     break
-        
+
+        # 2) Fallback: dựng properties từ skuMaps (COLOR/SIZE) nếu có
+        if not out:
+            item_props = self.get_nested(data, 'data.itemPropertys', []) or self.get_nested(data, 'itemPropertys', [])
+            if isinstance(item_props, list) and item_props:
+                for prop in item_props:
+                    if not isinstance(prop, dict):
+                        continue
+                    # Ưu tiên title trước name để lấy tên thực tế
+                    name = prop.get('title') or prop.get('name') or ''
+                    p_type = prop.get('type') or ''
+                    values: List[Dict[str, Any]] = []
+                    for child in prop.get('childPropertys') or []:
+                        if isinstance(child, dict):
+                            item = {'name': child.get('title') or child.get('properties') or ''}
+                            img = child.get('image') or child.get('bigImage')
+                            if img:
+                                item['image'] = img
+                            values.append(item)
+                    if name and values:
+                        out.append({'name': name, 'values': values})
+
         return out
 
     def extract_sku_list(self, data: Dict) -> List[Dict[str, str]]:
         """Trích xuất danh sách SKU"""
         sku_list = []
         
-        # Thử các đường dẫn khác nhau cho SKU list
+        # 1) Map từ các cấu trúc skuList (nếu có) sang schema giống transformer_1688
         sku_paths = [
             'data.skuList',
             'data.product.skuList',
@@ -109,20 +181,80 @@ class TransformerPugo:
             'product.skuList',
             'item.skuList'
         ]
-        
+
         for path in sku_paths:
             sku_data = self.get_nested(data, path, [])
             if isinstance(sku_data, list) and sku_data:
                 for sku in sku_data:
                     if isinstance(sku, dict):
-                        sku_item = {
+                        spec_attrs = str(
+                            sku.get('specAttrs') or sku.get('specAttributes') or sku.get('spec') or ''
+                        )
+                        # Đồng bộ hoá định dạng specAttrs như 1688 (thay &gt; thành | nếu có)
+                        spec_attrs = spec_attrs.replace('&gt;', '|')
+                        sku_list.append({
                             'canBookCount': str(sku.get('canBookCount') or sku.get('stock') or sku.get('quantity') or ''),
                             'price': str(sku.get('price') or sku.get('salePrice') or ''),
-                            'specAttrs': str(sku.get('specAttrs') or sku.get('specAttributes') or sku.get('spec') or '')
-                        }
-                        sku_list.append(sku_item)
+                            'specAttrs': spec_attrs
+                        })
                 if sku_list:
                     break
+
+        # 2) Fallback: map từ skuMaps của Pugo (thường có trên kết quả 1688/Taobao)
+        if not sku_list:
+            sku_maps = self.get_nested(data, 'data.skuMaps', []) or self.get_nested(data, 'skuMaps', [])
+            if isinstance(sku_maps, list) and sku_maps:
+                # Chuẩn bị map từ prop code -> title để chuyển propPath thành tên hiển thị
+                prop_map = {}
+                item_props = self.get_nested(data, 'data.itemPropertys', []) or self.get_nested(data, 'itemPropertys', [])
+                if isinstance(item_props, list):
+                    for prop in item_props:
+                        for child in (prop.get('childPropertys') or []):
+                            if isinstance(child, dict):
+                                code = child.get('properties')
+                                title = child.get('title') or child.get('properties') or ''
+                                if code and title:
+                                    prop_map[str(code)] = str(title)
+                for sku in sku_maps:
+                    if isinstance(sku, dict):
+                        # specAttrs: ưu tiên lấy tên hiển thị
+                        spec_display_parts = []
+                        sku_map_str = sku.get('skuMap')
+                        prop_path = sku.get('propPath')
+
+                        if isinstance(sku_map_str, str) and sku_map_str.strip():
+                            # Ví dụ: "购买规格--1件;香味--【首推爆款】温和脱毛膏200ml" => ["1件", "【首推爆款】温和脱毛膏200ml"]
+                            for seg in sku_map_str.split(';'):
+                                seg = str(seg).strip()
+                                if not seg:
+                                    continue
+                                if '--' in seg:
+                                    seg = seg.split('--', 1)[1]
+                                spec_display_parts.append(seg)
+                        elif isinstance(prop_path, str) and prop_path.strip():
+                            # Ví dụ: "-1:-1;-2:-3" -> map qua prop_map
+                            for code in prop_path.split(';'):
+                                code = str(code).strip()
+                                if not code:
+                                    continue
+                                spec_display_parts.append(prop_map.get(code, code))
+                        else:
+                            # Fallback cuối: ghép tất cả field có thể thành chuỗi
+                            raw = sku.get('propPath') or sku.get('skuMap') or ''
+                            if isinstance(raw, list):
+                                spec_display_parts = [str(x) for x in raw]
+                            else:
+                                raw = str(raw)
+                                spec_display_parts = [p for p in raw.replace('&gt;', '|').replace(';', '|').split('|') if p]
+
+                        spec = '|'.join([p for p in spec_display_parts if p])
+
+                        price_value = sku.get('price') or sku.get('discountPrice') or ''
+                        sku_list.append({
+                            'canBookCount': str(sku.get('canBookCount') or sku.get('stock') or sku.get('quantity') or ''),
+                            'price': str(price_value),
+                            'specAttrs': spec
+                        })
         
         return sku_list
 
@@ -158,6 +290,66 @@ class TransformerPugo:
                 if out:
                     break
         
+        # Nếu không tìm thấy rangePrices, thử tìm wholesales (cấu trúc của pugo)
+        if not out:
+            wholesales_paths = [
+                'data.wholesales',
+                'data.product.wholesales',
+                'data.item.wholesales',
+                'wholesales',
+                'product.wholesales',
+                'item.wholesales'
+            ]
+            
+            for path in wholesales_paths:
+                wholesales_data = self.get_nested(data, path, [])
+                if isinstance(wholesales_data, list) and wholesales_data:
+                    for w in wholesales_data:
+                        if isinstance(w, dict):
+                            begin = int(w.get('begin') or w.get('minQuantity') or 1)
+                            price = float(w.get('price') or w.get('unitPrice') or 0)
+                            end = int(w.get('end') or w.get('maxQuantity') or 0)
+                            
+                            # Xử lý trường hợp end = 0 (không giới hạn)
+                            if end == 0:
+                                end = 999999
+                            
+                            out.append({
+                                'beginAmount': begin,
+                                'price': price,
+                                'endAmount': end,
+                                'discountPrice': price  # Trong wholesales thường không có discountPrice riêng
+                            })
+                    if out:
+                        break
+        
+        # Nếu vẫn không có rangePrices, tạo từ giá cơ bản (cho trường hợp Taobao)
+        if not out:
+            base_price = None
+            # Ưu tiên startPrice (giá cơ bản) trước sellPrice (giá cao nhất)
+            price_paths = [
+                'data.startPrice', 
+                'data.price',
+                'startPrice',
+                'price',
+                'data.sellPrice',
+                'sellPrice'
+            ]
+            
+            for path in price_paths:
+                price = self.get_nested(data, path)
+                if price is not None and float(price) > 0:
+                    base_price = float(price)
+                    break
+            
+            if base_price:
+                out.append({
+                    'beginAmount': 1,
+                    'price': base_price,
+                    'endAmount': 999999,
+                    'discountPrice': base_price
+                })
+        
         return out
 
     def extract_max_price(self, data: Dict) -> str:
@@ -167,7 +359,7 @@ class TransformerPugo:
         if range_prices:
             return str(max([p['price'] for p in range_prices]))
         
-        # Thử các đường dẫn khác
+        # Thử các đường dẫn khác cho giá - ưu tiên startPrice (giá cơ bản) trước sellPrice
         price_paths = [
             'data.maxPrice',
             'data.product.maxPrice',
@@ -175,14 +367,16 @@ class TransformerPugo:
             'maxPrice',
             'product.maxPrice',
             'item.maxPrice',
+            'data.startPrice',  # Ưu tiên startPrice (giá cơ bản) trước
             'data.price',
             'data.product.price',
-            'data.item.price'
+            'data.item.price',
+            'data.sellPrice',  # sellPrice (giá cao nhất) cuối cùng
         ]
         
         for path in price_paths:
             price = self.get_nested(data, path)
-            if price is not None:
+            if price is not None and str(price) != '0':
                 return str(price)
         
         return '0.00'
@@ -215,16 +409,23 @@ class TransformerPugo:
     def extract_source_id(self, data: Dict) -> str:
         """Trích xuất source ID"""
         # Thử các đường dẫn khác nhau cho source ID
+        # Ưu tiên productId trước vì đây là ID thực của sản phẩm
         id_paths = [
             'data.sourceId',
             'data.product.sourceId',
             'data.item.sourceId',
+            'data.productId',  # Ưu tiên productId trước id
+            'data.product.productId',
+            'data.item.productId',
             'data.id',
             'data.product.id',
             'data.item.id',
             'sourceId',
             'product.sourceId',
             'item.sourceId',
+            'productId',
+            'product.productId',
+            'item.productId',
             'id',
             'product.id',
             'item.id'
@@ -232,7 +433,7 @@ class TransformerPugo:
         
         for path in id_paths:
             source_id = self.get_nested(data, path)
-            if source_id is not None:
+            if source_id is not None and str(source_id) != '0':  # Bỏ qua giá trị 0
                 return str(source_id)
         
         return ''
@@ -298,11 +499,11 @@ class TransformerPugo:
 
         data = raw['raw_data']
         
-        # Nếu raw_data có nested data từ API response
-        if isinstance(data, dict) and 'data' in data:
-            api_data = data['data']
-        else:
-            api_data = data
+        # Nếu raw_data có nested data từ API response (pugo: data.data)
+        api_data = data
+        if isinstance(data, dict) and 'data' in data and isinstance(data['data'], dict):
+            inner = data['data']
+            api_data = inner.get('data', inner)
 
         # Trích xuất các thông tin
         images = self.extract_images(api_data)
@@ -315,28 +516,28 @@ class TransformerPugo:
         description = self.extract_description(api_data)
         seller_info = self.extract_seller_info(api_data)
         
-        # Tạo URL từ sourceId nếu cần
-        url = raw.get('url') or ''
+        # Lấy URL từ dữ liệu pugo (itemUrl) hoặc từ raw data
+        url = self.get_nested(api_data, 'itemUrl') or raw.get('url') or ''
         if not url and sourceId:
-            # Có thể cần điều chỉnh format URL dựa trên source
+            # Fallback: tạo URL từ sourceId
             url = f"https://pugo.vn/item/{sourceId}"
 
+        # Xác định source type thực tế từ URL
+        actual_source_type = self.detect_source_type(url)
+
+        # Trả về cấu trúc giống transformer_1688.py (đúng các key backend đang nhận)
         return {
             'images': images,
             'skuProperty': skuProperty,
-            'properties': skuProperty,  # Alias để tương thích
+            # Alias để tương thích backend ProductService expects `properties`
+            'properties': skuProperty,
             'sku': sku,
+            'rangePrices': rangePrices,
             'maxPrice': maxPrice,
             'name': name,
             'sourceId': sourceId,
-            'sourceType': 'pugo',
+            'sourceType': actual_source_type,  # Sử dụng source type thực tế
             'url': url,
-            'rangePrices': rangePrices,
-            'description': description,
-            'seller': seller_info,
-            # Thêm thông tin bổ sung
-            'raw_data_keys': list(api_data.keys()) if isinstance(api_data, dict) else [],
-            'extraction_timestamp': raw.get('timestamp', 0)
         }
 
 

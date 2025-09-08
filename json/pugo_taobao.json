@@ -1,0 +1,226 @@
+{
+  "success": true,
+  "code": null,
+  "message": "SUCCESS",
+  "data": {
+      "id": 0,
+      "productId": "970702482842",
+      "name": "蓝色假两件翻领麻花毛衣女秋冬宽松慵懒风加厚时尚外穿针织衫上衣",
+      "nameTranslate": null,
+      "rate": 3810,
+      "itemUrl": "https://item.taobao.com/item.htm?id=970702482842",
+      "shopId": "1914143091",
+      "shopName": "韩蕾娜",
+      "shopUrl": "http://store.taobao.com/shop/view_shop.htm?user_number_id=1914143091",
+      "sellerLevelIcon": null,
+      "sellerStart": null,
+      "sellerNick": null,
+      "sellerUrl": null,
+      "website": "TAOBAO",
+      "startPrice": 59.9,
+      "sellPrice": 59.9,
+      "startPriceVND": 228219,
+      "sellPriceVND": 228219,
+      "startPriceDisplay": 0.0,
+      "sellPriceDisplay": 0.0,
+      "stock": 40000,
+      "transaction": 0,
+      "repurchaseRate": 0.0,
+      "image": "https://img.alicdn.com/bao/uploaded/i2/1914143091/O1CN01n2Tqrq1YhjKI63MVi_!!1914143091.jpg",
+      "imageThumb": "https://img.alicdn.com/bao/uploaded/i2/1914143091/O1CN01n2Tqrq1YhjKI63MVi_!!1914143091.jpg",
+      "imgThumbs": [
+          "https://img.alicdn.com/bao/uploaded/i2/1914143091/O1CN01n2Tqrq1YhjKI63MVi_!!1914143091.jpg",
+          "https://img.alicdn.com/bao/uploaded/i2/1914143091/O1CN014P18611YhjKHgBNCS_!!1914143091.jpg",
+          "https://img.alicdn.com/bao/uploaded/i2/1914143091/O1CN01oSmIkW1YhjKHadDvs_!!1914143091.jpg",
+          "https://img.alicdn.com/bao/uploaded/i2/1914143091/O1CN01vX7UGH1YhjKGfJ7is_!!1914143091.jpg",
+          "https://img.alicdn.com/bao/uploaded/i4/1914143091/O1CN01PCgvi41YhjKI61t4W_!!1914143091.jpg"
+      ],
+      "skuMaps": [
+          {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--S",
+              "propPath": "1627207:2455130729;20509:28314",
+              "skuId": "5920279960728",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--M",
+              "propPath": "1627207:2455130729;20509:28315",
+              "skuId": "5920279960729",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--L",
+              "propPath": "1627207:2455130729;20509:28316",
+              "skuId": "5920279960730",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--XL",
+              "propPath": "1627207:2455130729;20509:28317",
+              "skuId": "5920279960731",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--XXL",
+              "propPath": "1627207:2455130729;20509:28318",
+              "skuId": "5920279960732",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          }
+      ],
+      "skuMapsAvailable": {
+          "1627207:2455130729;20509:28316": {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--L",
+              "propPath": "1627207:2455130729;20509:28316",
+              "skuId": "5920279960730",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          "1627207:2455130729;20509:28317": {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--XL",
+              "propPath": "1627207:2455130729;20509:28317",
+              "skuId": "5920279960731",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          "1627207:2455130729;20509:28314": {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--S",
+              "propPath": "1627207:2455130729;20509:28314",
+              "skuId": "5920279960728",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          "1627207:2455130729;20509:28315": {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--M",
+              "propPath": "1627207:2455130729;20509:28315",
+              "skuId": "5920279960729",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          },
+          "1627207:2455130729;20509:28318": {
+              "skuMap": "颜色分类--蓝色假两件【优质版】;尺码--XXL",
+              "propPath": "1627207:2455130729;20509:28318",
+              "skuId": "5920279960732",
+              "canBookCount": 8000,
+              "saleCount": 0,
+              "price": 59.9,
+              "discountPrice": 0.0
+          }
+      },
+      "itemPropertys": [
+          {
+              "type": "COLOR",
+              "id": null,
+              "title": "颜色分类",
+              "name": "Màu sắc",
+              "nameTranslate": null,
+              "childPropertys": [
+                  {
+                      "title": "蓝色假两件【优质版】",
+                      "titleTranslate": null,
+                      "properties": "1627207:2455130729",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  }
+              ]
+          },
+          {
+              "type": "SIZE",
+              "id": null,
+              "title": "尺码",
+              "name": "Kích cỡ",
+              "nameTranslate": null,
+              "childPropertys": [
+                  {
+                      "title": "S",
+                      "titleTranslate": null,
+                      "properties": "20509:28314",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  },
+                  {
+                      "title": "M",
+                      "titleTranslate": null,
+                      "properties": "20509:28315",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  },
+                  {
+                      "title": "L",
+                      "titleTranslate": null,
+                      "properties": "20509:28316",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  },
+                  {
+                      "title": "XL",
+                      "titleTranslate": null,
+                      "properties": "20509:28317",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  },
+                  {
+                      "title": "XXL",
+                      "titleTranslate": null,
+                      "properties": "20509:28318",
+                      "image": null,
+                      "bigImage": null,
+                      "price": 0.0,
+                      "skuId": null
+                  }
+              ]
+          }
+      ],
+      "wholesales": [],
+      "aliwangwang": "韩蕾娜",
+      "dataItem": null,
+      "dataJson": null,
+      "errorCode": null,
+      "freightWeight": 0.0,
+      "strErrorCode": null,
+      "detailProperties": [],
+      "detailContent": "<p><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01pmHfF71YhjKHIvRlf_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i2/1914143091/O1CN01XENXCJ1YhjKIXqyfp_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i2/1914143091/O1CN01otDD1W1YhjKHkvIRw_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i1/1914143091/O1CN01AOoXrm1YhjKGCRiJ7_!!1914143091.png\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i4/1914143091/O1CN01ysIC4m1YhjKGCQZcZ_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01XeXKa31YhjKIKDXl2_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i4/1914143091/O1CN01apaumV1YhjKIBy35q_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01XeXKa31YhjKIKDXl2_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN013slxAT1YhjKHkxmIG_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01XeXKa31YhjKIKDXl2_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01UclfWk1YhjKHaeld6_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01XeXKa31YhjKIKDXl2_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01XD57u51YhjKIBzeso_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i4/1914143091/O1CN01c3DQyv1YhjKGbb3E9_!!1914143091.png\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01n96Oga1YhjKHDa9G5_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01XeXKa31YhjKIKDXl2_!!1914143091.jpg\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i3/1914143091/O1CN01YlYT6m1YhjKGfJ3dA_!!1914143091.png\" style=\"max-width: 750.0px;\"><img align=\"absmiddle\" src=\"https://img.alicdn.com/imgextra/i4/1914143091/O1CN01ZiNXiH1YhjKHacYPu_!!1914143091.png\" style=\"max-width: 750.0px;\"></p>",
+      "saleLocation": null,
+      "isDetailContent": false,
+      "transalated": false,
+      "categoryId": null,
+      "categoryName": null,
+      "complete": false,
+      "priceDisplay": null,
+      "soldCount": null,
+      "sourceCrawl": null,
+      "dataItemPrice": null
+  }
+}
