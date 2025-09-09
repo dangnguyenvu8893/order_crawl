@@ -52,6 +52,57 @@ Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
 window.chrome = { runtime: {} };
 """)
 
+    def _get_from_path(self, data: Dict[str, Any], path: list) -> Optional[Any]:
+        cur: Any = data
+        for key in path:
+            if isinstance(cur, dict) and key in cur:
+                cur = cur[key]
+            else:
+                return None
+        return cur
+
+    def _find_unit_weight_in_result(self, result_obj: Dict[str, Any]) -> Optional[float]:
+        candidates = [
+            ["data", "shippingServices", "fields", "unitWeight"],
+            ["data", "productPackInfo", "fields", "unitWeight"],
+            ["data", "shippingServices", "fields", "freightInfo", "unitWeight"],
+            ["data", "submitOrder", "fields", "freightInfo", "unitWeight"],
+            ["global", "globalData", "model", "freightInfo", "unitWeight"],
+        ]
+        for path in candidates:
+            v = self._get_from_path(result_obj, path)
+            if isinstance(v, (int, float)):
+                return float(v)
+            # đôi khi là chuỗi số
+            if isinstance(v, str):
+                try:
+                    return float(v)
+                except Exception:
+                    pass
+        return None
+
+    def _find_unit_weight(self, raw: Optional[Dict[str, Any]], html: Optional[str]) -> Optional[float]:
+        # Ưu tiên lấy từ cấu trúc result
+        if isinstance(raw, dict):
+            # raw có dạng {"result": {...}} hoặc chính là result
+            if "result" in raw and isinstance(raw["result"], dict):
+                uw = self._find_unit_weight_in_result(raw["result"])  # type: ignore[arg-type]
+                if uw is not None:
+                    return uw
+            else:
+                uw = self._find_unit_weight_in_result(raw)
+                if uw is not None:
+                    return uw
+        # Fallback: quét nhanh từ HTML
+        if isinstance(html, str):
+            m = re.search(r"\"unitWeight\"\s*:\s*([0-9]+(?:\.[0-9]+)?)", html)
+            if m:
+                try:
+                    return float(m.group(1))
+                except Exception:
+                    return None
+        return None
+
     def _parse_with_node(self, json_str: str) -> Optional[Dict[str, Any]]:
         try:
             subprocess = __import__('subprocess')
@@ -291,6 +342,17 @@ try {{
                     raw = self.extract_result_json(html)
             cookies_used = len(context.cookies())
 
+            # Trích xuất unitWeight bổ sung theo nhiều nguồn, tuân thủ logic hiện có
+            unit_weight = self._find_unit_weight(raw, html)
+            # nếu có raw là dict, thêm unitWeight vào raw_data để downstream có thể dùng trực tiếp
+            if isinstance(raw, dict) and unit_weight is not None:
+                try:
+                    raw.setdefault("meta", {})  # không ghi đè cấu trúc chính
+                    if isinstance(raw["meta"], dict):
+                        raw["meta"]["unitWeight"] = unit_weight
+                except Exception:
+                    pass
+
             return {
                 "status": "success" if raw else "error",
                 "url": url,
@@ -299,6 +361,7 @@ try {{
                 "sourceId": product_id,
                 "content_length": len(html),
                 "cookies_used": cookies_used,
+                "unitWeight": unit_weight,
                 "raw_data": raw,
             }
         finally:

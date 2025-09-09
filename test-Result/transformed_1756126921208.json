@@ -689,5 +689,6 @@
       "endAmount": 999999,
       "discountPrice": 90.87
     }
-  ]
+  ],
+  "unitWeight": 1.0
 }

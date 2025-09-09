@@ -3,6 +3,15 @@ from typing import Any, Dict, List
 
 class Transformer1688:
     """Chuẩn hoá dữ liệu theo logic backend data_transformer.js (flatten)."""
+    # Các path khả dĩ chứa unitWeight trong raw_data
+    UNIT_WEIGHT_PATHS = [
+        'result.data.shippingServices.fields.unitWeight',
+        'result.data.productPackInfo.fields.unitWeight',
+        'result.data.shippingServices.fields.freightInfo.unitWeight',
+        'result.data.submitOrder.fields.freightInfo.unitWeight',
+        'result.global.globalData.model.freightInfo.unitWeight',
+        'meta.unitWeight',  # meta do extractor chèn thêm
+    ]
 
     def get_nested(self, obj: Dict, path: str, default=None):
         try:
@@ -63,6 +72,30 @@ class Transformer1688:
                     })
         return sku_list
 
+    def extract_unit_weight(self, raw: Dict[str, Any]) -> float:
+        data = raw.get('raw_data') if isinstance(raw, dict) else None
+        # ưu tiên lấy từ raw_data nếu có
+        if isinstance(data, dict):
+            for p in self.UNIT_WEIGHT_PATHS:
+                v = self.get_nested(data, p)
+                if isinstance(v, (int, float)):
+                    return float(v)
+                if isinstance(v, str):
+                    try:
+                        return float(v)
+                    except Exception:
+                        pass
+        # fallback: lấy trực tiếp ở root output của extractor nếu có
+        v = raw.get('unitWeight') if isinstance(raw, dict) else None
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except Exception:
+                return 0.0
+        return 0.0
+
     def extract_range_prices(self, data: Dict) -> List[Dict[str, Any]]:
         out = []
         arr = self.get_nested(data, 'result.data.Root.fields.dataJson.orderParamModel.orderParam.skuParam.skuRangePrices', [])
@@ -109,6 +142,7 @@ class Transformer1688:
         name = self.extract_name(data)
         sourceId = self.extract_source_id(data) or raw.get('sourceId') or ''
         url = raw.get('url') or (f"https://detail.1688.com/offer/{sourceId}.html" if sourceId else '')
+        unitWeight = self.extract_unit_weight(raw)
 
         return {
             'images': images,
@@ -122,6 +156,7 @@ class Transformer1688:
             'sourceType': '1688',
             'url': url,
             'rangePrices': rangePrices,
+            'unitWeight': unitWeight,
         }
 
 
