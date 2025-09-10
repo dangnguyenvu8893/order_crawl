@@ -2,13 +2,12 @@
 FROM python:3.11-slim as base
 
 # Cài đặt các dependencies cần thiết cho Selenium
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     gnupg \
     ca-certificates \
     fonts-liberation \
-    fonts-unifont \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -16,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     libcups2 \
     libdbus-1-3 \
     libdrm2 \
-    libgdk-pixbuf-xlib-2.0-0 \
+    libgdk-pixbuf-2.0-0 \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
@@ -27,10 +26,9 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     xdg-utils \
     unzip \
-    gpg \
-    software-properties-common \
     apt-transport-https \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Tạo thư mục làm việc
 WORKDIR /app
