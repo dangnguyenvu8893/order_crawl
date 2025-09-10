@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     unzip \
     gpg \
+    software-properties-common \
+    apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
 
 # Tạo thư mục làm việc
@@ -40,28 +42,38 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Cài đặt Chrome cho Selenium (multi-arch support)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
+        # Cài đặt Google Chrome cho AMD64
         wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg && \
-        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list && \
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
         apt-get update && \
-        apt-get install -y google-chrome-stable; \
+        apt-get install -y google-chrome-stable && \
+        # Tạo symlink cho google-chrome
+        ln -sf /usr/bin/google-chrome-stable /usr/bin/google-chrome; \
     else \
         # For ARM64, use Chromium instead
         apt-get update && \
-        apt-get install -y chromium chromium-driver; \
+        apt-get install -y chromium chromium-driver && \
+        # Tạo symlink cho chromium
+        ln -sf /usr/bin/chromium /usr/bin/google-chrome; \
     fi && \
     rm -rf /var/lib/apt/lists/*
 
 # Cài đặt ChromeDriver (nếu cần)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
+        # Cài đặt ChromeDriver cho AMD64
         CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1-3) && \
-        CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}") && \
-        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" && \
-        unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
+        echo "Chrome version: $CHROME_VERSION" && \
+        # Sử dụng Chrome for Testing API mới
+        CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_VERSION}") && \
+        echo "ChromeDriver version: $CHROMEDRIVER_VERSION" && \
+        wget -O /tmp/chromedriver.zip "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" && \
+        unzip /tmp/chromedriver.zip -d /tmp/ && \
+        mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
         chmod +x /usr/local/bin/chromedriver && \
-        rm /tmp/chromedriver.zip; \
+        rm -rf /tmp/chromedriver*; \
     else \
-        # Chromium driver đã được cài đặt cùng với chromium package \
+        # Chromium driver đã được cài đặt cùng với chromium package
         echo "Chromium driver already installed"; \
     fi
 
@@ -76,6 +88,12 @@ RUN mkdir -p /app/logs
 
 # Thay đổi ownership của tất cả files
 RUN chown -R appuser:appuser /app
+
+# Thiết lập biến môi trường cho Chrome
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+ENV CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
 
 # Chuyển sang user appuser
 USER appuser

@@ -2,15 +2,28 @@ version: '3.8'
 
 services:
   crawler-service:
-    build: .
+    build: 
+      context: .
+      platforms:
+        - linux/amd64
+    platform: linux/amd64
     container_name: order-management-crawler
     ports:
       - "5001:5001"
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+      - DISPLAY=:99
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROME_PATH=/usr/bin/google-chrome
+      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
     volumes:
       - ./logs:/app/logs
+    shm_size: 2g
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
