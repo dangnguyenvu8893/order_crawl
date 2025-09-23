@@ -31,20 +31,64 @@ class ExtractorPugo:
         self.cookies_file = os.path.join(self.session_dir, "pugo_cookies.pkl")
         self.session_file = os.path.join(self.session_dir, "pugo_session.pkl")
         
-        # Tạo thư mục session nếu chưa có
+        # Khởi tạo session directory với fallback
+        self._init_session_directory()
+    
+    def _init_session_directory(self) -> None:
+        """Khởi tạo thư mục session với fallback strategies"""
+        # Strategy 1: Thử tạo thư mục chính
         try:
             os.makedirs(self.session_dir, exist_ok=True)
+            # Test write permission
+            test_file = os.path.join(self.session_dir, ".test_write")
+            with open(test_file, 'w') as f:
+                f.write("test")
+            os.remove(test_file)
+            logger.info(f"✓ Session directory ready: {self.session_dir}")
+            return
         except PermissionError as e:
-            logger.error(f"Permission denied khi tạo thư mục {self.session_dir}: {e}")
-            # Fallback: sử dụng thư mục tạm thời
+            logger.warning(f"Permission denied cho thư mục chính {self.session_dir}: {e}")
+        except Exception as e:
+            logger.warning(f"Lỗi khi tạo thư mục chính {self.session_dir}: {e}")
+        
+        # Strategy 2: Thử các thư mục fallback khác
+        fallback_dirs = [
+            "/tmp/pugo_sessions",
+            "/app/tmp/sessions", 
+            os.path.expanduser("~/pugo_sessions"),
+            os.path.join(os.getcwd(), "sessions")
+        ]
+        
+        for fallback_dir in fallback_dirs:
+            try:
+                os.makedirs(fallback_dir, exist_ok=True)
+                # Test write permission
+                test_file = os.path.join(fallback_dir, ".test_write")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+                
+                # Update paths
+                self.session_dir = fallback_dir
+                self.cookies_file = os.path.join(self.session_dir, "pugo_cookies.pkl")
+                self.session_file = os.path.join(self.session_dir, "pugo_session.pkl")
+                logger.info(f"✓ Using fallback session directory: {self.session_dir}")
+                return
+            except Exception as e:
+                logger.debug(f"Fallback directory {fallback_dir} failed: {e}")
+                continue
+        
+        # Strategy 3: Sử dụng tempfile (cuối cùng)
+        try:
             import tempfile
             self.session_dir = tempfile.mkdtemp(prefix="pugo_sessions_")
             self.cookies_file = os.path.join(self.session_dir, "pugo_cookies.pkl")
             self.session_file = os.path.join(self.session_dir, "pugo_session.pkl")
-            logger.info(f"Sử dụng thư mục tạm thời: {self.session_dir}")
+            logger.warning(f"⚠️ Using temporary session directory: {self.session_dir}")
+            logger.warning("⚠️ Sessions will not persist between container restarts")
         except Exception as e:
-            logger.error(f"Lỗi khi tạo thư mục session: {e}")
-            raise
+            logger.error(f"❌ All session directory strategies failed: {e}")
+            raise Exception("Không thể tạo thư mục session với bất kỳ strategy nào")
         
     def can_handle(self, url: str) -> bool:
         """Kiểm tra xem URL có thể được xử lý bởi pugo.vn extractor không"""
@@ -55,16 +99,29 @@ class ExtractorPugo:
                    re.search(r"detail\.tmall\.com", url))
     
     def save_cookies(self, cookies: list) -> None:
-        """Lưu cookies vào file"""
-        try:
-            with open(self.cookies_file, 'wb') as f:
-                pickle.dump(cookies, f)
-            logger.info(f"Đã lưu {len(cookies)} cookies vào {self.cookies_file}")
-        except PermissionError as e:
-            logger.error(f"Permission denied khi lưu cookies: {e}")
-            logger.warning("Không thể lưu cookies, session sẽ không được persist")
-        except Exception as e:
-            logger.error(f"Lỗi khi lưu cookies: {e}")
+        """Lưu cookies vào file với retry mechanism"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                with open(self.cookies_file, 'wb') as f:
+                    pickle.dump(cookies, f)
+                logger.info(f"✓ Đã lưu {len(cookies)} cookies vào {self.cookies_file}")
+                return
+            except PermissionError as e:
+                logger.error(f"❌ Permission denied khi lưu cookies (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    # Thử tạo lại thư mục với quyền khác
+                    try:
+                        os.makedirs(os.path.dirname(self.cookies_file), exist_ok=True)
+                        logger.info(f"🔄 Retrying với thư mục mới...")
+                    except Exception as retry_e:
+                        logger.warning(f"⚠️ Retry failed: {retry_e}")
+                else:
+                    logger.warning("⚠️ Không thể lưu cookies sau {max_retries} lần thử")
+                    logger.warning("⚠️ Session sẽ không được persist, cần đăng nhập lại mỗi lần")
+            except Exception as e:
+                logger.error(f"❌ Lỗi khi lưu cookies: {e}")
+                break
     
     def load_cookies(self) -> Optional[list]:
         """Load cookies từ file"""
@@ -79,17 +136,30 @@ class ExtractorPugo:
         return None
     
     def save_session(self, session_data: dict) -> None:
-        """Lưu thông tin session"""
-        try:
-            session_data['timestamp'] = time.time()
-            with open(self.session_file, 'wb') as f:
-                pickle.dump(session_data, f)
-            logger.info(f"Đã lưu session vào {self.session_file}")
-        except PermissionError as e:
-            logger.error(f"Permission denied khi lưu session: {e}")
-            logger.warning("Không thể lưu session, sẽ cần đăng nhập lại mỗi lần")
-        except Exception as e:
-            logger.error(f"Lỗi khi lưu session: {e}")
+        """Lưu thông tin session với retry mechanism"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                session_data['timestamp'] = time.time()
+                with open(self.session_file, 'wb') as f:
+                    pickle.dump(session_data, f)
+                logger.info(f"✓ Đã lưu session vào {self.session_file}")
+                return
+            except PermissionError as e:
+                logger.error(f"❌ Permission denied khi lưu session (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    # Thử tạo lại thư mục với quyền khác
+                    try:
+                        os.makedirs(os.path.dirname(self.session_file), exist_ok=True)
+                        logger.info(f"🔄 Retrying với thư mục mới...")
+                    except Exception as retry_e:
+                        logger.warning(f"⚠️ Retry failed: {retry_e}")
+                else:
+                    logger.warning("⚠️ Không thể lưu session sau {max_retries} lần thử")
+                    logger.warning("⚠️ Sẽ cần đăng nhập lại mỗi lần")
+            except Exception as e:
+                logger.error(f"❌ Lỗi khi lưu session: {e}")
+                break
     
     def load_session(self) -> Optional[dict]:
         """Load thông tin session"""

@@ -18,7 +18,7 @@ services:
       - CHROME_PATH=/usr/bin/google-chrome
       - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
     volumes:
-      - ./logs/sessions:/app/logs/sessions
+      - pugo_sessions:/app/logs/sessions
     shm_size: 2g
     ulimits:
       nofile:
@@ -33,6 +33,10 @@ services:
       start_period: 40s
     networks:
       - crawler-network
+
+volumes:
+  pugo_sessions:
+    driver: local
 
 networks:
   crawler-network:
