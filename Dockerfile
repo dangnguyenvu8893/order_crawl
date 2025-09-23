@@ -81,8 +81,8 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 # Copy source code
 COPY . .
 
-# Tạo thư mục để lưu logs
-RUN mkdir -p /app/logs
+# Tạo thư mục để lưu logs và sessions
+RUN mkdir -p /app/logs/sessions
 
 # Thay đổi ownership của tất cả files
 RUN chown -R appuser:appuser /app

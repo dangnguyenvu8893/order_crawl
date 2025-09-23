@@ -32,7 +32,19 @@ class ExtractorPugo:
         self.session_file = os.path.join(self.session_dir, "pugo_session.pkl")
         
         # Tạo thư mục session nếu chưa có
-        os.makedirs(self.session_dir, exist_ok=True)
+        try:
+            os.makedirs(self.session_dir, exist_ok=True)
+        except PermissionError as e:
+            logger.error(f"Permission denied khi tạo thư mục {self.session_dir}: {e}")
+            # Fallback: sử dụng thư mục tạm thời
+            import tempfile
+            self.session_dir = tempfile.mkdtemp(prefix="pugo_sessions_")
+            self.cookies_file = os.path.join(self.session_dir, "pugo_cookies.pkl")
+            self.session_file = os.path.join(self.session_dir, "pugo_session.pkl")
+            logger.info(f"Sử dụng thư mục tạm thời: {self.session_dir}")
+        except Exception as e:
+            logger.error(f"Lỗi khi tạo thư mục session: {e}")
+            raise
         
     def can_handle(self, url: str) -> bool:
         """Kiểm tra xem URL có thể được xử lý bởi pugo.vn extractor không"""
@@ -48,6 +60,9 @@ class ExtractorPugo:
             with open(self.cookies_file, 'wb') as f:
                 pickle.dump(cookies, f)
             logger.info(f"Đã lưu {len(cookies)} cookies vào {self.cookies_file}")
+        except PermissionError as e:
+            logger.error(f"Permission denied khi lưu cookies: {e}")
+            logger.warning("Không thể lưu cookies, session sẽ không được persist")
         except Exception as e:
             logger.error(f"Lỗi khi lưu cookies: {e}")
     
@@ -70,6 +85,9 @@ class ExtractorPugo:
             with open(self.session_file, 'wb') as f:
                 pickle.dump(session_data, f)
             logger.info(f"Đã lưu session vào {self.session_file}")
+        except PermissionError as e:
+            logger.error(f"Permission denied khi lưu session: {e}")
+            logger.warning("Không thể lưu session, sẽ cần đăng nhập lại mỗi lần")
         except Exception as e:
             logger.error(f"Lỗi khi lưu session: {e}")
     
