@@ -6,6 +6,11 @@ import os
 import pickle
 from typing import Dict, Any, Optional, Tuple
 
+# Import URL resolver utility
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils.url_resolver import resolve_product_url
+
 # Import Selenium
 try:
     from selenium import webdriver
@@ -36,11 +41,14 @@ class ExtractorPugo:
         
     def can_handle(self, url: str) -> bool:
         """Kiểm tra xem URL có thể được xử lý bởi pugo.vn extractor không"""
-        # Chấp nhận URL pugo.vn, Taobao, 1688, Tmall (vì pugo.vn có thể xử lý các URL này)
+        # Chấp nhận URL pugo.vn, Taobao, 1688, Tmall và các short URLs
         return bool(re.search(r"pugo\.vn", url) or 
                    re.search(r"item\.taobao\.com", url) or 
                    re.search(r"detail\.1688\.com", url) or
-                   re.search(r"detail\.tmall\.com", url))
+                   re.search(r"detail\.tmall\.com", url) or
+                   re.search(r"e\.tb\.cn", url) or  # 🆕 Short URL
+                   re.search(r"tb\.cn", url) or    # 🆕 Short URL  
+                   re.search(r"s\.tb\.cn", url))   # 🆕 Short URL
     
     def save_cookies(self, cookies: list) -> None:
         """Lưu cookies vào file"""
@@ -456,8 +464,33 @@ class ExtractorPugo:
         """
         Extract thông tin từ URL pugo.vn
         """
-        if not self.can_handle(url):
-            return {"status": "error", "message": "Unsupported URL - not a pugo.vn URL"}
+        original_url = url
+        
+        # 🆕 BƯỚC 1: Resolve URL nếu cần thiết
+        logger.info(f"🔍 Starting extraction for URL: {url}")
+        resolve_result = resolve_product_url(url)
+        
+        if not resolve_result['success']:
+            logger.error(f"❌ Cannot resolve URL {url}: {resolve_result.get('error', 'Unknown error')}")
+            return {
+                "status": "error", 
+                "message": f"Cannot resolve URL: {resolve_result.get('error', 'Unknown error')}",
+                "original_url": original_url,
+                "resolve_result": resolve_result
+            }
+        
+        # Sử dụng final URL để extract
+        final_url = resolve_result['final_url']
+        logger.info(f"✅ URL resolved: {original_url} → {final_url} ({resolve_result.get('redirect_count', 0)} redirects)")
+        
+        if not self.can_handle(final_url):
+            return {
+                "status": "error", 
+                "message": "Unsupported final URL after resolution",
+                "original_url": original_url,
+                "final_url": final_url,
+                "resolve_result": resolve_result
+            }
         
         try:
             driver = self._setup_browser()
@@ -468,21 +501,25 @@ class ExtractorPugo:
             if not login_success:
                 return {
                     "status": "error",
-                    "message": "Đăng nhập thất bại"
+                    "message": "Đăng nhập thất bại",
+                    "original_url": original_url,
+                    "final_url": final_url
                 }
             
-            # Gọi API để lấy thông tin sản phẩm
-            api_result = self._call_pugo_api_selenium(driver, url, sign_header, cookie_string)
+            # 🆕 BƯỚC 2: Gọi API với final URL
+            api_result = self._call_pugo_api_selenium(driver, final_url, sign_header, cookie_string)
             
             return {
                 "status": "success" if api_result["status"] == "success" else "error",
-                "url": url,
+                "url": final_url,  # Sử dụng final URL
+                "original_url": original_url,  # Giữ lại original URL để tracking
                 "timestamp": time.time(),
                 "sourceType": "pugo",
-                "sourceId": self._extract_source_id(url),
+                "sourceId": self._extract_source_id(final_url),
                 "login_success": login_success,
                 "sign_header": sign_header,
                 "cookie_string": cookie_string,
+                "resolve_result": resolve_result,  # Thông tin về quá trình resolve
                 "raw_data": api_result
             }
             
@@ -490,7 +527,9 @@ class ExtractorPugo:
             logger.error(f"Lỗi khi extract pugo: {e}")
             return {
                 "status": "error",
-                "message": str(e)
+                "message": str(e),
+                "original_url": original_url,
+                "final_url": final_url
             }
         finally:
             if 'driver' in locals():
