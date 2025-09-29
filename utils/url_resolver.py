@@ -35,7 +35,8 @@ class URLResolver:
             's.tb.cn',
             'm.tb.cn',
             's.click.taobao.com',
-            'uland.taobao.com'
+            'uland.taobao.com',
+            'qr.1688.com'  # Thêm hỗ trợ 1688 QR links
         ]
         
         # Các domain đích hợp lệ
@@ -206,10 +207,13 @@ class URLResolver:
             product_patterns = [
                 r'href=["\']([^"\']*detail\.tmall\.com[^"\']*)["\']',
                 r'href=["\']([^"\']*item\.taobao\.com[^"\']*)["\']',
+                r'href=["\']([^"\']*detail\.1688\.com[^"\']*)["\']',
                 r'url=["\']([^"\']*detail\.tmall\.com[^"\']*)["\']',
                 r'url=["\']([^"\']*item\.taobao\.com[^"\']*)["\']',
+                r'url=["\']([^"\']*detail\.1688\.com[^"\']*)["\']',
                 r'["\']([^"\']*detail\.tmall\.com[^"\']*)["\']',
-                r'["\']([^"\']*item\.taobao\.com[^"\']*)["\']'
+                r'["\']([^"\']*item\.taobao\.com[^"\']*)["\']',
+                r'["\']([^"\']*detail\.1688\.com[^"\']*)["\']'
             ]
             
             import re
@@ -228,16 +232,27 @@ class URLResolver:
                 r'itemId["\']?\s*:\s*["\']?(\d+)["\']?',
                 r'item_id["\']?\s*:\s*["\']?(\d+)["\']?',
                 r'id["\']?\s*:\s*["\']?(\d{9,13})["\']?',
-                r'productId["\']?\s*:\s*["\']?(\d+)["\']?'
+                r'productId["\']?\s*:\s*["\']?(\d+)["\']?',
+                r'offerId=(\d+)',  # Thêm pattern cho 1688 offerId
+                r'offer\.id=(\d+)',  # Thêm pattern khác cho 1688
+                r'offer/(\d+)\.html'  # Thêm pattern từ URL path
             ]
             
             for pattern in id_patterns:
                 matches = re.findall(pattern, content, re.IGNORECASE)
                 if matches:
                     product_id = matches[0]
-                    # Construct URL (default to Taobao)
-                    final_url = f"https://item.taobao.com/item.htm?id={product_id}"
-                    logger.info(f"✅ ID extraction: {short_url} → {final_url}")
+                    
+                    # Xác định domain dựa trên short_url
+                    if 'qr.1688.com' in short_url or '1688.com' in short_url:
+                        # Construct 1688 URL
+                        final_url = f"https://detail.1688.com/offer/{product_id}.html"
+                        logger.info(f"✅ 1688 ID extraction: {short_url} → {final_url}")
+                    else:
+                        # Construct URL (default to Taobao)
+                        final_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                        logger.info(f"✅ ID extraction: {short_url} → {final_url}")
+                    
                     return final_url, 1
             
             logger.warning("No product URL or ID found in content")
