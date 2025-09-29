@@ -6,17 +6,33 @@ import os
 import pickle
 from typing import Dict, Any, Optional, Tuple
 
-# Import Selenium
-try:
-    from selenium import webdriver
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.chrome.options import Options
-except Exception:
-    webdriver = None
+# Import URL resolver utility
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from utils.url_resolver import resolve_product_url
 
+# Setup logger trước khi import selenium
 logger = logging.getLogger(__name__)
+
+# Import Selenium với error handling
+# Note: Selenium warnings có thể xuất hiện trong môi trường dev không có selenium
+try:
+    from selenium import webdriver  # type: ignore
+    from selenium.webdriver.common.by import By  # type: ignore
+    from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
+    from selenium.webdriver.support import expected_conditions as EC  # type: ignore
+    from selenium.webdriver.chrome.options import Options  # type: ignore
+    from selenium.webdriver.chrome.service import Service  # type: ignore
+    SELENIUM_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Selenium không khả dụng: {e}")
+    webdriver = None
+    By = None
+    WebDriverWait = None
+    EC = None
+    Options = None
+    Service = None
+    SELENIUM_AVAILABLE = False
 
 
 class ExtractorPugo:
@@ -91,12 +107,28 @@ class ExtractorPugo:
             raise Exception("Không thể tạo thư mục session với bất kỳ strategy nào")
         
     def can_handle(self, url: str) -> bool:
-        """Kiểm tra xem URL có thể được xử lý bởi pugo.vn extractor không"""
-        # Chấp nhận URL pugo.vn, Taobao, 1688, Tmall (vì pugo.vn có thể xử lý các URL này)
-        return bool(re.search(r"pugo\.vn", url) or 
-                   re.search(r"item\.taobao\.com", url) or 
-                   re.search(r"detail\.1688\.com", url) or
-                   re.search(r"detail\.tmall\.com", url))
+        """
+        Kiểm tra xem URL có thể được xử lý bởi pugo.vn extractor không
+        
+        Args:
+            url: URL cần kiểm tra
+            
+        Returns:
+            True nếu URL được hỗ trợ, False nếu không
+        """
+        # Danh sách các domain được hỗ trợ
+        supported_domains = [
+            r"pugo\.vn",
+            r"item\.taobao\.com", 
+            r"detail\.1688\.com",
+            r"detail\.tmall\.com",
+            r"e\.tb\.cn",      # Taobao short URL
+            r"tb\.cn",         # Taobao short URL  
+            r"s\.tb\.cn",      # Taobao short URL
+            r"qr\.1688\.com"   # 1688 QR links
+        ]
+        
+        return any(re.search(pattern, url) for pattern in supported_domains)
     
     def save_cookies(self, cookies: list) -> None:
         """Lưu cookies vào file với retry mechanism"""
@@ -224,7 +256,7 @@ class ExtractorPugo:
     
     def _setup_browser(self):
         """Thiết lập Selenium browser"""
-        if webdriver is None:
+        if not SELENIUM_AVAILABLE:
             raise Exception("Selenium chưa được cài đặt trong môi trường chạy")
         
         # Cấu hình Chrome options
@@ -260,7 +292,6 @@ class ExtractorPugo:
                 logger.error(f"Both Chrome and Chromium failed: {e2}")
                 # Thử với service và executable_path
                 try:
-                    from selenium.webdriver.chrome.service import Service
                     service = Service(executable_path="/usr/bin/chromedriver")
                     chrome_options.binary_location = "/usr/bin/chromium"
                     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -543,59 +574,138 @@ class ExtractorPugo:
     def extract(self, url: str) -> Dict[str, Any]:
         """
         Extract thông tin từ URL pugo.vn
+        
+        Args:
+            url: URL cần extract (có thể là short URL hoặc direct URL)
+            
+        Returns:
+            Dict chứa kết quả extraction với metadata đầy đủ
         """
-        if not self.can_handle(url):
-            return {"status": "error", "message": "Unsupported URL - not a pugo.vn URL"}
+        original_url = url
+        driver = None
         
         try:
-            driver = self._setup_browser()
+            # BƯỚC 1: Resolve URL nếu cần thiết
+            logger.info(f"Starting extraction for URL: {url}")
+            resolve_result = resolve_product_url(url)
             
-            # Đăng nhập và lấy thông tin xác thực
+            if not resolve_result['success']:
+                error_msg = f"Cannot resolve URL: {resolve_result.get('error', 'Unknown error')}"
+                logger.error(f"URL resolution failed for {url}: {error_msg}")
+                return self._create_error_response(
+                    message=error_msg,
+                    original_url=original_url,
+                    resolve_result=resolve_result
+                )
+            
+            # Sử dụng final URL để extract
+            final_url = resolve_result['final_url']
+            redirect_count = resolve_result.get('redirect_count', 0)
+            logger.info(f"URL resolved: {original_url} → {final_url} ({redirect_count} redirects)")
+            
+            if not self.can_handle(final_url):
+                return self._create_error_response(
+                    message="Unsupported final URL after resolution",
+                    original_url=original_url,
+                    final_url=final_url,
+                    resolve_result=resolve_result
+                )
+        
+            # BƯỚC 2: Setup browser và đăng nhập
+            driver = self._setup_browser()
             login_success, sign_header, cookie_string = self._login_to_pugo(driver)
             
             if not login_success:
-                return {
-                    "status": "error",
-                    "message": "Đăng nhập thất bại"
-                }
+                return self._create_error_response(
+                    message="Đăng nhập thất bại",
+                    original_url=original_url,
+                    final_url=final_url,
+                    resolve_result=resolve_result
+                )
             
-            # Gọi API để lấy thông tin sản phẩm
-            api_result = self._call_pugo_api_selenium(driver, url, sign_header, cookie_string)
+            # BƯỚC 3: Gọi API với final URL
+            api_result = self._call_pugo_api_selenium(driver, final_url, sign_header, cookie_string)
             
+            # Tạo response thành công
             return {
                 "status": "success" if api_result["status"] == "success" else "error",
-                "url": url,
+                "url": final_url,
+                "original_url": original_url,
                 "timestamp": time.time(),
                 "sourceType": "pugo",
-                "sourceId": self._extract_source_id(url),
+                "sourceId": self._extract_source_id(final_url),
                 "login_success": login_success,
                 "sign_header": sign_header,
                 "cookie_string": cookie_string,
+                "resolve_result": resolve_result,
                 "raw_data": api_result
             }
             
         except Exception as e:
             logger.error(f"Lỗi khi extract pugo: {e}")
-            return {
-                "status": "error",
-                "message": str(e)
-            }
+            return self._create_error_response(
+                message=str(e),
+                original_url=original_url,
+                final_url=final_url if 'final_url' in locals() else None,
+                resolve_result=resolve_result if 'resolve_result' in locals() else None
+            )
         finally:
-            if 'driver' in locals():
+            if driver:
                 driver.quit()
     
     def _extract_source_id(self, url: str) -> str:
-        """Trích xuất source ID từ URL"""
-        # Có thể cần điều chỉnh dựa trên format URL thực tế
-        if "item.taobao.com" in url:
-            # Từ URL Taobao
-            match = re.search(r'id=(\d+)', url)
-            return match.group(1) if match else ""
-        elif "pugo.vn" in url:
-            # Từ URL pugo.vn
-            match = re.search(r'/(\d+)', url)
-            return match.group(1) if match else ""
+        """
+        Trích xuất source ID từ URL
+        
+        Args:
+            url: URL cần trích xuất source ID
+            
+        Returns:
+            Source ID string hoặc empty string nếu không tìm thấy
+        """
+        # Pattern matching cho các loại URL khác nhau
+        url_patterns = {
+            "item.taobao.com": r'id=(\d+)',
+            "detail.1688.com": r'/offer/(\d+)\.html',
+            "pugo.vn": r'/(\d+)'
+        }
+        
+        for domain, pattern in url_patterns.items():
+            if domain in url:
+                match = re.search(pattern, url)
+                if match:
+                    return match.group(1)
+        
         return ""
+    
+    def _create_error_response(self, message: str, original_url: str, 
+                              final_url: str = None, resolve_result: dict = None) -> Dict[str, Any]:
+        """
+        Tạo response lỗi chuẩn
+        
+        Args:
+            message: Thông báo lỗi
+            original_url: URL gốc
+            final_url: URL cuối cùng (nếu có)
+            resolve_result: Kết quả resolve (nếu có)
+            
+        Returns:
+            Dict response lỗi chuẩn
+        """
+        response = {
+            "status": "error",
+            "message": message,
+            "original_url": original_url,
+            "timestamp": time.time(),
+            "sourceType": "pugo"
+        }
+        
+        if final_url:
+            response["final_url"] = final_url
+        if resolve_result:
+            response["resolve_result"] = resolve_result
+            
+        return response
 
 
 # Tạo instance global

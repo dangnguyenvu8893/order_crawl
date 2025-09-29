@@ -51,15 +51,33 @@ class Transformer1688:
         return out
 
     def extract_sku_list(self, data: Dict) -> List[Dict[str, str]]:
+        """
+        Trích xuất danh sách SKU với giá riêng cho từng variant
+        Hỗ trợ 2 pattern pricing:
+        1. SKU_BASED: Mỗi variant có giá riêng (4包, 60包, 30包...)
+        2. RANGE_BASED: SKU không có giá riêng, dùng rangePrices
+        """
         sku_list = []
         sku_map = self.get_nested(data, 'result.data.Root.fields.dataJson.skuModel.skuInfoMap', {})
+        
         if isinstance(sku_map, dict):
-            for _, info in sku_map.items():
+            for sku_id, info in sku_map.items():
                 if isinstance(info, dict):
+                    # Lấy giá từ nhiều nguồn khác nhau để đảm bảo không bỏ sót
+                    sku_price = (
+                        info.get('price') or 
+                        info.get('unitPrice') or 
+                        info.get('sellPrice') or 
+                        info.get('startPrice') or 
+                        info.get('skuPrice') or
+                        ''
+                    )
+                    
                     sku_list.append({
                         'canBookCount': str(info.get('canBookCount') or ''),
-                        'price': '',
-                        'specAttrs': str(info.get('specAttrs') or '').replace('&gt;', '|')
+                        'price': str(sku_price),  # Lấy giá thực tế thay vì chuỗi rỗng
+                        'specAttrs': str(info.get('specAttrs') or '').replace('&gt;', '|'),
+                        'skuId': str(sku_id)  # Thêm ID để debug và tracking
                     })
         return sku_list
 
