@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class URLResolver:
     def __init__(self):
-        self.timeout = 10
+        self.timeout = 30  # Tăng timeout lên 30 giây
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -29,33 +29,64 @@ class URLResolver:
             'Referer': 'https://m.taobao.com/'
         }
         
-        # Các domain cần resolve
+        # Các domain cần resolve (comprehensive list)
         self.short_domains = [
+            # Taobao short links
             'e.tb.cn',
             'tb.cn', 
             's.tb.cn',
             'm.tb.cn',
             's.click.taobao.com',
             'uland.taobao.com',
-            'qr.1688.com'  # Thêm hỗ trợ 1688 QR links
+            
+            # Taobao mobile domains
+            'm.taobao.com',
+            'h5.m.taobao.com',
+            
+            # Tmall mobile domains
+            'm.tmall.com',
+            'h5.tmall.com',
+            
+            # 1688 domains
+            'qr.1688.com',
+            'm.1688.com',
+            'h5.1688.com'
         ]
         
-        # Các domain đích hợp lệ
+        # Các domain đích hợp lệ (comprehensive list)
         self.target_domains = [
-            'detail.tmall.com',
+            # Taobao desktop
             'item.taobao.com',
-            'detail.1688.com'
+            
+            # Tmall desktop
+            'detail.tmall.com',
+            
+            # 1688 desktop
+            'detail.1688.com',
+            
+            # Mobile domains (also valid targets)
+            'm.taobao.com',
+            'h5.m.taobao.com',
+            'm.tmall.com',
+            'h5.tmall.com',
+            'm.1688.com',
+            'h5.1688.com'
         ]
         
-        # Regex patterns để extract URL từ text
-        # Cải thiện để xử lý URL có ký tự thừa ở cuối
+        # Regex patterns để extract URL từ text (comprehensive patterns)
         self.url_extraction_patterns = [
+            # Pattern cho short links (ưu tiên cao nhất)
+            r'https?://(?:qr\.1688\.com|e\.tb\.cn|tb\.cn|s\.tb\.cn|m\.tb\.cn|s\.click\.taobao\.com|uland\.taobao\.com)/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*',
+            
+            # Pattern cho mobile domains
+            r'https?://(?:m\.taobao\.com|h5\.m\.taobao\.com|m\.tmall\.com|h5\.tmall\.com|m\.1688\.com|h5\.1688\.com)/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*',
+            
+            # Pattern cho desktop product URLs
+            r'https?://(?:detail\.tmall\.com|item\.taobao\.com|detail\.1688\.com)/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*',
+            
             # Pattern chính: URL với domain và path, dừng ở ký tự không hợp lệ
             r'https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*)?',
-            # Pattern cho short links (qr.1688.com, e.tb.cn, etc.)
-            r'https?://(?:qr\.1688\.com|e\.tb\.cn|tb\.cn|s\.tb\.cn|m\.tb\.cn|s\.click\.taobao\.com|uland\.taobao\.com)/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*',
-            # Pattern cho full product URLs
-            r'https?://(?:detail\.tmall\.com|item\.taobao\.com|detail\.1688\.com)/[a-zA-Z0-9._~:/?#\[\]@!$&\'()*+,;=-]*',
+            
             # Fallback pattern cho các URL khác
             r'https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/[^\s]*',
         ]
@@ -247,13 +278,23 @@ class URLResolver:
         try:
             logger.info(f"🔍 Resolving: {short_url}")
             
-            # Strategy 1: Thử HTTP redirect trước
-            response = requests.head(
-                short_url, 
-                headers=self.headers, 
-                allow_redirects=True, 
-                timeout=self.timeout
-            )
+            # Strategy 1: Thử HTTP redirect trước (HEAD request)
+            try:
+                response = requests.head(
+                    short_url, 
+                    headers=self.headers, 
+                    allow_redirects=True, 
+                    timeout=self.timeout
+                )
+            except requests.RequestException:
+                # Nếu HEAD request thất bại, thử GET request
+                logger.info("HEAD request failed, trying GET request...")
+                response = requests.get(
+                    short_url, 
+                    headers=self.headers, 
+                    allow_redirects=True, 
+                    timeout=self.timeout
+                )
             
             final_url = response.url
             redirect_count = len(response.history)
@@ -263,12 +304,164 @@ class URLResolver:
                 logger.info(f"✅ HTTP redirect: {short_url} → {final_url} ({redirect_count} redirects)")
                 return final_url, redirect_count
             
-            # Strategy 2: Nếu không có HTTP redirect, parse content
-            logger.info("No HTTP redirect, trying content parsing...")
-            return self._parse_content_for_url(short_url)
+            # Strategy 2: Thử parse URL trực tiếp từ short URL
+            logger.info("No HTTP redirect, trying direct URL parsing...")
+            direct_result = self._parse_short_url_directly(short_url)
+            if direct_result[1] > 0:  # Nếu có kết quả
+                return direct_result
+            
+            # Strategy 3: Nếu không có kết quả, parse content
+            logger.info("No direct parsing result, trying content parsing...")
+            content_result = self._parse_content_for_url(short_url)
+            if content_result[1] > 0:  # Nếu có kết quả
+                return content_result
+            
+            # Strategy 4: Thử với User-Agent khác (desktop)
+            logger.info("Content parsing failed, trying with desktop User-Agent...")
+            return self._parse_with_desktop_ua(short_url)
             
         except requests.RequestException as e:
             logger.error(f"❌ Request failed: {e}")
+            return short_url, 0
+    
+    def _parse_short_url_directly(self, short_url: str) -> tuple:
+        """
+        Parse short URL trực tiếp để tìm product ID
+        Returns: (final_url, redirect_count)
+        """
+        try:
+            import re
+            from urllib.parse import urlparse, parse_qs
+            
+            # Parse URL để lấy path và query parameters
+            parsed = urlparse(short_url)
+            path = parsed.path
+            query_params = parse_qs(parsed.query)
+            
+            # Tìm product ID trong path hoặc query parameters
+            product_id = None
+            
+            # Thử lấy từ query parameters
+            for param_name in ['id', 'itemId', 'item_id', 'productId']:
+                if param_name in query_params:
+                    product_id = query_params[param_name][0]
+                    break
+            
+            # Thử tìm ID trong path
+            if not product_id:
+                id_match = re.search(r'/(\d{9,13})', path)
+                if id_match:
+                    product_id = id_match.group(1)
+            
+            # Thử tìm ID trong toàn bộ URL
+            if not product_id:
+                id_match = re.search(r'(\d{9,13})', short_url)
+                if id_match:
+                    product_id = id_match.group(1)
+            
+            if product_id:
+                # Xác định domain dựa trên short_url (comprehensive logic)
+                if 'qr.1688.com' in short_url or '1688.com' in short_url:
+                    final_url = f"https://detail.1688.com/offer/{product_id}.html"
+                elif 'm.tb.cn' in short_url or 'm.taobao.com' in short_url or 'h5.m.taobao.com' in short_url:
+                    final_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                elif 'm.tmall.com' in short_url or 'h5.tmall.com' in short_url or 'tmall' in short_url.lower():
+                    final_url = f"https://detail.tmall.com/item.htm?id={product_id}"
+                elif 'm.1688.com' in short_url or 'h5.1688.com' in short_url:
+                    final_url = f"https://detail.1688.com/offer/{product_id}.html"
+                else:
+                    # Default to Taobao for unknown domains
+                    final_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                
+                logger.info(f"✅ Direct parsing: {short_url} → {final_url}")
+                return final_url, 1
+            
+            return short_url, 0
+            
+        except Exception as e:
+            logger.error(f"❌ Direct parsing failed: {e}")
+            return short_url, 0
+    
+    def _parse_with_desktop_ua(self, short_url: str) -> tuple:
+        """
+        Parse URL với desktop User-Agent
+        Returns: (final_url, redirect_count)
+        """
+        try:
+            # Desktop User-Agent
+            desktop_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Cache-Control': 'max-age=0',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Referer': 'https://www.taobao.com/'
+            }
+            
+            # Thử GET request với desktop UA
+            response = requests.get(
+                short_url, 
+                headers=desktop_headers, 
+                allow_redirects=True,
+                timeout=self.timeout
+            )
+            
+            final_url = response.url
+            redirect_count = len(response.history)
+            
+            # Nếu có redirect và URL hợp lệ
+            if redirect_count > 0 and self.is_valid_target_url(final_url):
+                logger.info(f"✅ Desktop UA redirect: {short_url} → {final_url} ({redirect_count} redirects)")
+                return final_url, redirect_count
+            
+            # Nếu không có redirect, thử parse content
+            content = response.text
+            logger.info(f"Desktop UA got content: {len(content)} bytes")
+            
+            # Tìm product ID trong content
+            import re
+            id_patterns = [
+                r'itemId["\']?\s*:\s*["\']?(\d+)["\']?',
+                r'item_id["\']?\s*:\s*["\']?(\d+)["\']?',
+                r'id["\']?\s*:\s*["\']?(\d{9,13})["\']?',
+                r'productId["\']?\s*:\s*["\']?(\d+)["\']?',
+                r'[?&]id=(\d+)',
+                r'[?&]itemId=(\d+)',
+                r'[?&]item_id=(\d+)',
+                r'[?&]productId=(\d+)'
+            ]
+            
+            for pattern in id_patterns:
+                matches = re.findall(pattern, content, re.IGNORECASE)
+                if matches:
+                    product_id = matches[0]
+                    
+                    # Xác định domain dựa trên short_url
+                    if 'm.tb.cn' in short_url or 'm.taobao.com' in short_url or 'h5.m.taobao.com' in short_url:
+                        final_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                        logger.info(f"✅ Desktop UA ID extraction: {short_url} → {final_url}")
+                        return final_url, 1
+                    elif 'm.tmall.com' in short_url or 'h5.tmall.com' in short_url or 'tmall' in short_url.lower():
+                        final_url = f"https://detail.tmall.com/item.htm?id={product_id}"
+                        logger.info(f"✅ Desktop UA Tmall ID extraction: {short_url} → {final_url}")
+                        return final_url, 1
+                    elif 'qr.1688.com' in short_url or '1688.com' in short_url:
+                        final_url = f"https://detail.1688.com/offer/{product_id}.html"
+                        logger.info(f"✅ Desktop UA 1688 ID extraction: {short_url} → {final_url}")
+                        return final_url, 1
+            
+            logger.warning("Desktop UA: No product ID found in content")
+            return short_url, 0
+            
+        except Exception as e:
+            logger.error(f"❌ Desktop UA parsing failed: {e}")
             return short_url, 0
     
     def _parse_content_for_url(self, short_url: str) -> tuple:
@@ -277,18 +470,33 @@ class URLResolver:
         Returns: (final_url, redirect_count)
         """
         try:
-            # GET request để lấy content
-            response = requests.get(
-                short_url, 
-                headers=self.headers, 
-                timeout=self.timeout
-            )
+            # GET request để lấy content với retry logic
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(
+                        short_url, 
+                        headers=self.headers, 
+                        timeout=self.timeout
+                    )
+                    break
+                except requests.Timeout:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Timeout attempt {attempt + 1}, retrying...")
+                        continue
+                    else:
+                        logger.error(f"All {max_retries} attempts timed out")
+                        return short_url, 0
+                except requests.RequestException as e:
+                    logger.error(f"Request failed: {e}")
+                    return short_url, 0
             
             content = response.text
             logger.info(f"Got content: {len(content)} bytes")
             
-            # Tìm product URLs trong content
+            # Tìm product URLs trong content (comprehensive patterns)
             product_patterns = [
+                # Desktop URLs
                 r'href=["\']([^"\']*detail\.tmall\.com[^"\']*)["\']',
                 r'href=["\']([^"\']*item\.taobao\.com[^"\']*)["\']',
                 r'href=["\']([^"\']*detail\.1688\.com[^"\']*)["\']',
@@ -297,7 +505,29 @@ class URLResolver:
                 r'url=["\']([^"\']*detail\.1688\.com[^"\']*)["\']',
                 r'["\']([^"\']*detail\.tmall\.com[^"\']*)["\']',
                 r'["\']([^"\']*item\.taobao\.com[^"\']*)["\']',
-                r'["\']([^"\']*detail\.1688\.com[^"\']*)["\']'
+                r'["\']([^"\']*detail\.1688\.com[^"\']*)["\']',
+                
+                # Mobile URLs
+                r'href=["\']([^"\']*m\.taobao\.com[^"\']*)["\']',
+                r'href=["\']([^"\']*h5\.m\.taobao\.com[^"\']*)["\']',
+                r'href=["\']([^"\']*m\.tmall\.com[^"\']*)["\']',
+                r'href=["\']([^"\']*h5\.tmall\.com[^"\']*)["\']',
+                r'href=["\']([^"\']*m\.1688\.com[^"\']*)["\']',
+                r'href=["\']([^"\']*h5\.1688\.com[^"\']*)["\']',
+                
+                r'url=["\']([^"\']*m\.taobao\.com[^"\']*)["\']',
+                r'url=["\']([^"\']*h5\.m\.taobao\.com[^"\']*)["\']',
+                r'url=["\']([^"\']*m\.tmall\.com[^"\']*)["\']',
+                r'url=["\']([^"\']*h5\.tmall\.com[^"\']*)["\']',
+                r'url=["\']([^"\']*m\.1688\.com[^"\']*)["\']',
+                r'url=["\']([^"\']*h5\.1688\.com[^"\']*)["\']',
+                
+                r'["\']([^"\']*m\.taobao\.com[^"\']*)["\']',
+                r'["\']([^"\']*h5\.m\.taobao\.com[^"\']*)["\']',
+                r'["\']([^"\']*m\.tmall\.com[^"\']*)["\']',
+                r'["\']([^"\']*h5\.tmall\.com[^"\']*)["\']',
+                r'["\']([^"\']*m\.1688\.com[^"\']*)["\']',
+                r'["\']([^"\']*h5\.1688\.com[^"\']*)["\']'
             ]
             
             import re
@@ -319,7 +549,17 @@ class URLResolver:
                 r'productId["\']?\s*:\s*["\']?(\d+)["\']?',
                 r'offerId=(\d+)',  # Thêm pattern cho 1688 offerId
                 r'offer\.id=(\d+)',  # Thêm pattern khác cho 1688
-                r'offer/(\d+)\.html'  # Thêm pattern từ URL path
+                r'offer/(\d+)\.html',  # Thêm pattern từ URL path
+                # Thêm patterns cho mobile taobao
+                r'itemId["\']?\s*=\s*["\']?(\d+)["\']?',
+                r'item_id["\']?\s*=\s*["\']?(\d+)["\']?',
+                r'id["\']?\s*=\s*["\']?(\d{9,13})["\']?',
+                r'productId["\']?\s*=\s*["\']?(\d+)["\']?',
+                # Thêm patterns cho URL parameters
+                r'[?&]id=(\d+)',
+                r'[?&]itemId=(\d+)',
+                r'[?&]item_id=(\d+)',
+                r'[?&]productId=(\d+)'
             ]
             
             for pattern in id_patterns:
@@ -327,11 +567,23 @@ class URLResolver:
                 if matches:
                     product_id = matches[0]
                     
-                    # Xác định domain dựa trên short_url
+                    # Xác định domain dựa trên short_url (comprehensive logic)
                     if 'qr.1688.com' in short_url or '1688.com' in short_url:
                         # Construct 1688 URL
                         final_url = f"https://detail.1688.com/offer/{product_id}.html"
                         logger.info(f"✅ 1688 ID extraction: {short_url} → {final_url}")
+                    elif 'm.tb.cn' in short_url or 'm.taobao.com' in short_url or 'h5.m.taobao.com' in short_url:
+                        # Construct mobile Taobao URL
+                        final_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                        logger.info(f"✅ Mobile Taobao ID extraction: {short_url} → {final_url}")
+                    elif 'm.tmall.com' in short_url or 'h5.tmall.com' in short_url or 'tmall' in short_url.lower():
+                        # Construct Tmall URL
+                        final_url = f"https://detail.tmall.com/item.htm?id={product_id}"
+                        logger.info(f"✅ Tmall ID extraction: {short_url} → {final_url}")
+                    elif 'm.1688.com' in short_url or 'h5.1688.com' in short_url:
+                        # Construct 1688 URL
+                        final_url = f"https://detail.1688.com/offer/{product_id}.html"
+                        logger.info(f"✅ Mobile 1688 ID extraction: {short_url} → {final_url}")
                     else:
                         # Construct URL (default to Taobao)
                         final_url = f"https://item.taobao.com/item.htm?id={product_id}"
