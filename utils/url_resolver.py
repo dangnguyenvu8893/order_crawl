@@ -214,6 +214,44 @@ class URLResolver:
             
             logger.info(f"✅ Resolved: {short_url} → {final_url} ({redirect_count} redirects)")
             
+            # Kiểm tra nếu final_url là deep link, convert thành web URL trước
+            if final_url.startswith(('wireless1688://', 'taobao://', 'tmall://')):
+                logger.info(f"🔄 Detected deep link, attempting conversion: {final_url}")
+                # Extract content sau protocol
+                deep_link_content = final_url.split('://', 1)[1] if '://' in final_url else final_url
+                converted_url = self._convert_deep_link_to_web_url(deep_link_content, short_url)
+                
+                if converted_url and self.is_valid_target_url(converted_url):
+                    logger.info(f"✅ Successfully converted deep link: {final_url} → {converted_url}")
+                    return {
+                        'success': True,
+                        'original_url': short_url,
+                        'final_url': converted_url,
+                        'redirect_count': redirect_count + 1,
+                        'method': 'deep_link_converted',
+                        'extracted_from_text': extracted_url is not None
+                    }
+                else:
+                    logger.warning(f"❌ Deep link conversion failed or invalid result: {converted_url}")
+            
+            # Kiểm tra nếu final_url là mobile URL, convert thành desktop URL
+            if self._is_mobile_url(final_url):
+                logger.info(f"🔄 Detected mobile URL, attempting desktop conversion: {final_url}")
+                desktop_url = self._convert_mobile_to_desktop_url(final_url)
+                
+                if desktop_url and self.is_valid_target_url(desktop_url):
+                    logger.info(f"✅ Successfully converted mobile to desktop: {final_url} → {desktop_url}")
+                    return {
+                        'success': True,
+                        'original_url': short_url,
+                        'final_url': desktop_url,
+                        'redirect_count': redirect_count + 1,
+                        'method': 'mobile_to_desktop_converted',
+                        'extracted_from_text': extracted_url is not None
+                    }
+                else:
+                    logger.warning(f"❌ Mobile to desktop conversion failed: {desktop_url}")
+            
             # Kiểm tra final URL có hợp lệ không
             if not self.is_valid_target_url(final_url):
                 # Nếu không có redirect, có thể link đã hết hạn
@@ -527,13 +565,27 @@ class URLResolver:
                 r'["\']([^"\']*m\.tmall\.com[^"\']*)["\']',
                 r'["\']([^"\']*h5\.tmall\.com[^"\']*)["\']',
                 r'["\']([^"\']*m\.1688\.com[^"\']*)["\']',
-                r'["\']([^"\']*h5\.1688\.com[^"\']*)["\']'
+                r'["\']([^"\']*h5\.1688\.com[^"\']*)["\']',
+                
+                # Deep link patterns (wireless1688://, taobao://, tmall://)
+                r'wireless1688://([^"\']*)["\']?',
+                r'taobao://([^"\']*)["\']?',
+                r'tmall://([^"\']*)["\']?'
             ]
             
             import re
             for pattern in product_patterns:
                 matches = re.findall(pattern, content, re.IGNORECASE)
                 if matches:
+                    # Xử lý deep links trước
+                    if 'wireless1688://' in pattern or 'taobao://' in pattern or 'tmall://' in pattern:
+                        for match in matches:
+                            # Convert deep link thành web URL
+                            web_url = self._convert_deep_link_to_web_url(match, short_url)
+                            if web_url:
+                                logger.info(f"✅ Deep link conversion: {short_url} → {web_url}")
+                                return web_url, 1
+                    
                     # Filter valid URLs (có id= và đủ dài)
                     valid_matches = [m for m in matches if 'id=' in m and len(m) > 20]
                     if valid_matches:
@@ -597,6 +649,166 @@ class URLResolver:
         except Exception as e:
             logger.error(f"❌ Content parsing failed: {e}")
             return short_url, 0
+    
+    def _convert_deep_link_to_web_url(self, deep_link_content: str, original_short_url: str) -> Optional[str]:
+        """
+        Convert deep link content thành web URL hợp lệ
+        Args:
+            deep_link_content: Nội dung của deep link (không bao gồm protocol)
+            original_short_url: URL gốc để xác định platform
+        Returns:
+            Web URL hợp lệ hoặc None
+        """
+        try:
+            import re
+            from urllib.parse import parse_qs, urlparse
+            
+            logger.info(f"🔄 Converting deep link: {deep_link_content}")
+            
+            # Tìm product ID trong deep link content
+            product_id = None
+            
+            # Pattern cho 1688 offerId
+            if 'offerId=' in deep_link_content:
+                match = re.search(r'offerId=(\d+)', deep_link_content)
+                if match:
+                    product_id = match.group(1)
+                    logger.info(f"Found 1688 offerId: {product_id}")
+            
+            # Pattern cho taobao/tmall itemId
+            elif 'id=' in deep_link_content:
+                match = re.search(r'id=(\d+)', deep_link_content)
+                if match:
+                    product_id = match.group(1)
+                    logger.info(f"Found itemId: {product_id}")
+            
+            # Pattern cho path-based IDs
+            elif '/offer/' in deep_link_content:
+                match = re.search(r'/offer/(\d+)', deep_link_content)
+                if match:
+                    product_id = match.group(1)
+                    logger.info(f"Found 1688 path offerId: {product_id}")
+            
+            elif '/item/' in deep_link_content:
+                match = re.search(r'/item/(\d+)', deep_link_content)
+                if match:
+                    product_id = match.group(1)
+                    logger.info(f"Found path itemId: {product_id}")
+            
+            # Tìm ID bằng regex chung
+            if not product_id:
+                id_match = re.search(r'(\d{9,13})', deep_link_content)
+                if id_match:
+                    product_id = id_match.group(1)
+                    logger.info(f"Found generic ID: {product_id}")
+            
+            if not product_id:
+                logger.warning("No product ID found in deep link")
+                return None
+            
+            # Xác định platform và tạo web URL
+            if '1688' in deep_link_content or 'qr.1688.com' in original_short_url:
+                web_url = f"https://detail.1688.com/offer/{product_id}.html"
+                logger.info(f"✅ Converted 1688 deep link: {web_url}")
+                return web_url
+            
+            elif 'tmall' in deep_link_content or 'tmall' in original_short_url.lower():
+                web_url = f"https://detail.tmall.com/item.htm?id={product_id}"
+                logger.info(f"✅ Converted Tmall deep link: {web_url}")
+                return web_url
+            
+            elif 'taobao' in deep_link_content or 'taobao' in original_short_url.lower():
+                web_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                logger.info(f"✅ Converted Taobao deep link: {web_url}")
+                return web_url
+            
+            else:
+                # Default to 1688 nếu không xác định được
+                web_url = f"https://detail.1688.com/offer/{product_id}.html"
+                logger.info(f"✅ Default 1688 conversion: {web_url}")
+                return web_url
+                
+        except Exception as e:
+            logger.error(f"❌ Deep link conversion failed: {e}")
+            return None
+    
+    def _is_mobile_url(self, url: str) -> bool:
+        """
+        Kiểm tra xem URL có phải là mobile URL không
+        Args:
+            url: URL cần kiểm tra
+        Returns:
+            True nếu là mobile URL
+        """
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            netloc = parsed.netloc.lower()
+            
+            # Mobile domains
+            mobile_domains = [
+                'm.taobao.com',
+                'h5.m.taobao.com', 
+                'main.m.taobao.com',
+                'm.tmall.com',
+                'h5.tmall.com',
+                'm.1688.com',
+                'h5.1688.com'
+            ]
+            
+            return any(domain in netloc for domain in mobile_domains)
+            
+        except Exception as e:
+            logger.error(f"❌ Error checking mobile URL: {e}")
+            return False
+    
+    def _convert_mobile_to_desktop_url(self, mobile_url: str) -> Optional[str]:
+        """
+        Convert mobile URL thành desktop URL
+        Args:
+            mobile_url: Mobile URL cần convert
+        Returns:
+            Desktop URL hoặc None
+        """
+        try:
+            from urllib.parse import urlparse
+            import re
+            
+            logger.info(f"🔄 Converting mobile URL to desktop: {mobile_url}")
+            
+            # Extract product ID từ mobile URL
+            product_id = self.extract_product_id(mobile_url)
+            
+            if not product_id:
+                logger.warning("No product ID found in mobile URL")
+                return None
+            
+            # Xác định platform và tạo desktop URL
+            parsed = urlparse(mobile_url)
+            netloc = parsed.netloc.lower()
+            
+            if 'taobao.com' in netloc:
+                desktop_url = f"https://item.taobao.com/item.htm?id={product_id}"
+                logger.info(f"✅ Converted Taobao mobile to desktop: {desktop_url}")
+                return desktop_url
+            
+            elif 'tmall.com' in netloc:
+                desktop_url = f"https://detail.tmall.com/item.htm?id={product_id}"
+                logger.info(f"✅ Converted Tmall mobile to desktop: {desktop_url}")
+                return desktop_url
+            
+            elif '1688.com' in netloc:
+                desktop_url = f"https://detail.1688.com/offer/{product_id}.html"
+                logger.info(f"✅ Converted 1688 mobile to desktop: {desktop_url}")
+                return desktop_url
+            
+            else:
+                logger.warning(f"Unknown platform for mobile URL: {netloc}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"❌ Mobile to desktop conversion failed: {e}")
+            return None
     
     
 
