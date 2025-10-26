@@ -663,7 +663,7 @@ class URLResolver:
             import re
             from urllib.parse import parse_qs, urlparse
             
-            logger.info(f"🔄 Converting deep link: {deep_link_content}")
+            logger.debug(f"Converting deep link: {deep_link_content}")
             
             # Tìm product ID trong deep link content
             product_id = None
@@ -673,34 +673,34 @@ class URLResolver:
                 match = re.search(r'offerId=(\d+)', deep_link_content)
                 if match:
                     product_id = match.group(1)
-                    logger.info(f"Found 1688 offerId: {product_id}")
+                    logger.debug(f"Found 1688 offerId: {product_id}")
             
             # Pattern cho taobao/tmall itemId
             elif 'id=' in deep_link_content:
                 match = re.search(r'id=(\d+)', deep_link_content)
                 if match:
                     product_id = match.group(1)
-                    logger.info(f"Found itemId: {product_id}")
+                    logger.debug(f"Found itemId: {product_id}")
             
             # Pattern cho path-based IDs
             elif '/offer/' in deep_link_content:
                 match = re.search(r'/offer/(\d+)', deep_link_content)
                 if match:
                     product_id = match.group(1)
-                    logger.info(f"Found 1688 path offerId: {product_id}")
+                    logger.debug(f"Found 1688 path offerId: {product_id}")
             
             elif '/item/' in deep_link_content:
                 match = re.search(r'/item/(\d+)', deep_link_content)
                 if match:
                     product_id = match.group(1)
-                    logger.info(f"Found path itemId: {product_id}")
+                    logger.debug(f"Found path itemId: {product_id}")
             
             # Tìm ID bằng regex chung
             if not product_id:
                 id_match = re.search(r'(\d{9,13})', deep_link_content)
                 if id_match:
                     product_id = id_match.group(1)
-                    logger.info(f"Found generic ID: {product_id}")
+                    logger.debug(f"Found generic ID: {product_id}")
             
             if not product_id:
                 logger.warning("No product ID found in deep link")
@@ -709,27 +709,27 @@ class URLResolver:
             # Xác định platform và tạo web URL
             if '1688' in deep_link_content or 'qr.1688.com' in original_short_url:
                 web_url = f"https://detail.1688.com/offer/{product_id}.html"
-                logger.info(f"✅ Converted 1688 deep link: {web_url}")
+                logger.debug(f"Converted 1688 deep link: {web_url}")
                 return web_url
             
             elif 'tmall' in deep_link_content or 'tmall' in original_short_url.lower():
                 web_url = f"https://detail.tmall.com/item.htm?id={product_id}"
-                logger.info(f"✅ Converted Tmall deep link: {web_url}")
+                logger.debug(f"Converted Tmall deep link: {web_url}")
                 return web_url
             
             elif 'taobao' in deep_link_content or 'taobao' in original_short_url.lower():
                 web_url = f"https://item.taobao.com/item.htm?id={product_id}"
-                logger.info(f"✅ Converted Taobao deep link: {web_url}")
+                logger.debug(f"Converted Taobao deep link: {web_url}")
                 return web_url
             
             else:
                 # Default to 1688 nếu không xác định được
                 web_url = f"https://detail.1688.com/offer/{product_id}.html"
-                logger.info(f"✅ Default 1688 conversion: {web_url}")
+                logger.debug(f"Default 1688 conversion: {web_url}")
                 return web_url
                 
         except Exception as e:
-            logger.error(f"❌ Deep link conversion failed: {e}")
+            logger.error(f"Deep link conversion failed: {e}")
             return None
     
     def _is_mobile_url(self, url: str) -> bool:
@@ -759,7 +759,7 @@ class URLResolver:
             return any(domain in netloc for domain in mobile_domains)
             
         except Exception as e:
-            logger.error(f"❌ Error checking mobile URL: {e}")
+            logger.error(f"Error checking mobile URL: {e}")
             return False
     
     def _convert_mobile_to_desktop_url(self, mobile_url: str) -> Optional[str]:
@@ -774,7 +774,7 @@ class URLResolver:
             from urllib.parse import urlparse
             import re
             
-            logger.info(f"🔄 Converting mobile URL to desktop: {mobile_url}")
+            logger.debug(f"Converting mobile URL to desktop: {mobile_url}")
             
             # Extract product ID từ mobile URL
             product_id = self.extract_product_id(mobile_url)
@@ -789,17 +789,17 @@ class URLResolver:
             
             if 'taobao.com' in netloc:
                 desktop_url = f"https://item.taobao.com/item.htm?id={product_id}"
-                logger.info(f"✅ Converted Taobao mobile to desktop: {desktop_url}")
+                logger.debug(f"Converted Taobao mobile to desktop: {desktop_url}")
                 return desktop_url
             
             elif 'tmall.com' in netloc:
                 desktop_url = f"https://detail.tmall.com/item.htm?id={product_id}"
-                logger.info(f"✅ Converted Tmall mobile to desktop: {desktop_url}")
+                logger.debug(f"Converted Tmall mobile to desktop: {desktop_url}")
                 return desktop_url
             
             elif '1688.com' in netloc:
                 desktop_url = f"https://detail.1688.com/offer/{product_id}.html"
-                logger.info(f"✅ Converted 1688 mobile to desktop: {desktop_url}")
+                logger.debug(f"Converted 1688 mobile to desktop: {desktop_url}")
                 return desktop_url
             
             else:
@@ -807,7 +807,7 @@ class URLResolver:
                 return None
                 
         except Exception as e:
-            logger.error(f"❌ Mobile to desktop conversion failed: {e}")
+            logger.error(f"Mobile to desktop conversion failed: {e}")
             return None
     
     
