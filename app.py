@@ -1,6 +1,11 @@
 from flask import Flask, request, jsonify
 from flasgger import Swagger, swag_from
 # from playwright.sync_api import sync_playwright  # Removed - using Selenium now
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 import logging
 import os
@@ -332,6 +337,179 @@ def get_page_content(page_content):
     except Exception as e:
         logger.error(f"Lỗi khi lấy thông tin trang: {e}")
         return {"status": "error", "message": str(e)}
+
+def _build_chrome_driver(headless: bool = True):
+    """Khởi tạo Chrome WebDriver headless với cấu hình chống bot nhẹ."""
+    options = ChromeOptions()
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--window-size=1366,768")
+    options.add_argument("--lang=vi-VN,vi")
+    options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0 Safari/537.36")
+
+    driver = webdriver.Chrome(options=options)
+    # Nỗ lực che webdriver flag
+    try:
+        driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            "source": """
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            """
+        })
+    except Exception:
+        pass
+    return driver
+
+def _parse_tracking_html(html: str, tracking_number: str):
+    """Parse HTML trả về cấu trúc timeline; xác thực tiêu đề có chứa mã vận đơn."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
+    shipping = soup.select_one('#shippingContent') or soup
+    title_span = shipping.select_one('span.text-result.gradient-border')
+    matched = False
+    if title_span and tracking_number:
+        matched = tracking_number in title_span.get_text(strip=True)
+
+    timeline = []
+    for li in shipping.select('ul.timeline_tracking li.event'):
+        city_el = li.select_one('span > b')
+        info_divs = li.select('div')
+        primary_text = info_divs[0].get_text(strip=True) if info_divs else ''
+        context_el = li.select_one('.context')
+        city = city_el.get_text(strip=True) if city_el else ''
+        status_text = primary_text
+        context = context_el.get_text(strip=True) if context_el else None
+        timeline.append({
+            'city': city,
+            'status': status_text,
+            'context': context
+        })
+
+    return {
+        'trackingNumber': tracking_number,
+        'matched': matched,
+        'timeline': timeline,
+        'rawHtml': str(shipping)
+    }
+
+def _sanitize_raw_html(html: str) -> str:
+    """Làm sạch HTML: bỏ script/style, sự kiện on*, javascript: URL."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html or '', 'html.parser')
+    # Remove script and style tags completely
+    for tag in soup(['script', 'style', 'iframe', 'object', 'embed']):
+        tag.decompose()
+    # Remove event handler attributes and javascript: links
+    for tag in soup.find_all(True):
+        # Remove on* attributes
+        attrs = dict(tag.attrs)
+        for attr in list(attrs.keys()):
+            if attr.lower().startswith('on'):
+                del tag.attrs[attr]
+        # Sanitize href/src
+        for attr in ('href', 'src'):
+            val = tag.get(attr)
+            if isinstance(val, str) and val.strip().lower().startswith('javascript:'):
+                del tag.attrs[attr]
+    return str(soup)
+
+@swag_from({
+    'tags': ['tracking'],
+    'summary': 'Tra cứu hành trình vận đơn nội địa Trung Quốc (amzcheck.net)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'trackingNumber': {'type': 'string', 'example': '78952381275889'}
+            },
+            'required': ['trackingNumber']
+        }
+    }],
+    'responses': {200: {'description': 'Tracking timeline', 'schema': {'type': 'object'}}}
+})
+@app.route('/track/china', methods=['POST'])
+def track_china():
+    data = request.get_json(silent=True) or {}
+    tracking_number = data.get('trackingNumber', '').strip()
+    if not tracking_number:
+        return jsonify({'error': 'trackingNumber is required'}), 400
+
+    start_ts = time.time()
+    driver = None
+    try:
+        driver = _build_chrome_driver(headless=True)
+        driver.set_page_load_timeout(30)
+        wait = WebDriverWait(driver, 25)
+
+        driver.get('https://amzcheck.net/')
+
+        # Điền mã vận đơn
+        inp = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#inp_num')))
+        inp.clear()
+        inp.send_keys(tracking_number)
+
+        # Click nút Tra cứu
+        btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#dnus')))
+        btn.click()
+
+        def _wait_and_parse():
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#shippingContent, #trackingContent')))
+            time.sleep(1.0)  # đợi render hoàn tất nhẹ
+            html_local = driver.page_source
+            parsed_local = _parse_tracking_html(html_local, tracking_number)
+            try:
+                parsed_local['safeHtml'] = _sanitize_raw_html(parsed_local.get('rawHtml') or '')
+            except Exception:
+                parsed_local['safeHtml'] = ''
+            return parsed_local
+
+        parsed = _wait_and_parse()
+
+        # Nếu chưa có timeline hoặc không khớp, thử Enter trên input
+        if not parsed.get('timeline') or parsed.get('matched') is False:
+            try:
+                inp2 = driver.find_element(By.CSS_SELECTOR, '#inp_num')
+                inp2.clear(); inp2.send_keys(tracking_number + "\n")
+                parsed = _wait_and_parse()
+            except Exception:
+                pass
+
+        # Nếu vẫn chưa có, thử gọi trực tiếp JS handler
+        if not parsed.get('timeline') or parsed.get('matched') is False:
+            try:
+                driver.execute_script('if (typeof checkChinaShippingForm === "function") { checkChinaShippingForm(); }')
+                parsed = _wait_and_parse()
+            except Exception:
+                pass
+
+        # Trả về 200 cả khi không khớp hoặc không có timeline để FE hiển thị rõ ràng
+        if not parsed.get('timeline') or parsed.get('matched') is False:
+            elapsed = round((time.time() - start_ts) * 1000)
+            parsed['elapsedMs'] = elapsed
+            return jsonify(parsed)
+
+        elapsed = round((time.time() - start_ts) * 1000)
+        parsed['elapsedMs'] = elapsed
+        return jsonify(parsed)
+
+    except Exception as e:
+        logger.error(f"Track error: {e}")
+        # Phân loại lỗi cơ bản
+        msg = str(e).lower()
+        if 'timeout' in msg:
+            return jsonify({'error': 'TIMEOUT'}), 408
+        return jsonify({'error': 'UPSTREAM_CHANGED', 'message': str(e)}), 502
+    finally:
+        try:
+            if driver:
+                driver.quit()
+        except Exception:
+            pass
 
 @app.route('/health', methods=['GET'])
 def health_check():
