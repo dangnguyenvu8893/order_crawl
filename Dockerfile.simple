@@ -13,9 +13,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Tạo thư mục làm việc
 WORKDIR /app
 
+# Upgrade pip và setuptools trước khi cài đặt dependencies
+RUN pip install --upgrade pip setuptools wheel
+
 # Copy requirements và cài đặt Python dependencies
+# Best practice: Copy requirements.txt riêng để tận dụng Docker layer caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Đảm bảo pip install fail nếu có lỗi và verify installation
+# CRITICAL: beautifulsoup4 là dependency bắt buộc cho tracking functionality
+RUN set -e && \
+    echo "=== Installing Python dependencies ===" && \
+    pip install --no-cache-dir --verbose -r requirements.txt && \
+    echo "=== Verifying beautifulsoup4 installation ===" && \
+    pip show beautifulsoup4 || (echo "CRITICAL ERROR: beautifulsoup4 not found after pip install" && pip list && exit 1) && \
+    python -c "import bs4; print('✓ beautifulsoup4 module imported successfully')" || (echo "CRITICAL ERROR: Cannot import bs4 module" && exit 1) && \
+    python -c "from bs4 import BeautifulSoup; print('✓ BeautifulSoup class imported successfully')" || (echo "CRITICAL ERROR: Cannot import BeautifulSoup class" && exit 1) && \
+    echo "=== beautifulsoup4 verification completed successfully ==="
 
 # Cài đặt Chrome cho AMD64
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg && \
