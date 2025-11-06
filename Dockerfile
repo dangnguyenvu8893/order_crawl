@@ -41,11 +41,14 @@ RUN pip install --upgrade pip setuptools wheel
 COPY requirements.txt .
 # Đảm bảo pip install fail nếu có lỗi và verify installation
 # CRITICAL: beautifulsoup4 là dependency bắt buộc cho tracking functionality
+# Best practice: Cài đặt beautifulsoup4 riêng biệt để đảm bảo 100% được cài đặt
 RUN set -e && \
-    echo "=== Installing Python dependencies ===" && \
+    echo "=== Installing Python dependencies from requirements.txt ===" && \
     pip install --no-cache-dir --verbose -r requirements.txt && \
+    echo "=== Explicitly installing beautifulsoup4 to ensure it's installed ===" && \
+    pip install --no-cache-dir --verbose beautifulsoup4==4.12.3 || (echo "CRITICAL ERROR: Failed to install beautifulsoup4 explicitly" && exit 1) && \
     echo "=== Verifying beautifulsoup4 installation ===" && \
-    pip show beautifulsoup4 || (echo "CRITICAL ERROR: beautifulsoup4 not found after pip install" && pip list && exit 1) && \
+    pip show beautifulsoup4 || (echo "CRITICAL ERROR: beautifulsoup4 not found after explicit install" && pip list && exit 1) && \
     python -c "import bs4; print('✓ beautifulsoup4 module imported successfully')" || (echo "CRITICAL ERROR: Cannot import bs4 module" && exit 1) && \
     python -c "from bs4 import BeautifulSoup; print('✓ BeautifulSoup class imported successfully')" || (echo "CRITICAL ERROR: Cannot import BeautifulSoup class" && exit 1) && \
     echo "=== beautifulsoup4 verification completed successfully ==="
