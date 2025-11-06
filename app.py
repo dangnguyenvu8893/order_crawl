@@ -6,6 +6,7 @@ import pickle
 import random
 import re
 import time
+import uuid
 from typing import Dict, Any, Tuple, Optional
 
 # Third-party imports
@@ -101,10 +102,88 @@ def save_sessions(sessions):
     except Exception as e:
         logger.error(f"Lỗi khi lưu sessions: {e}")
 
+def generate_fake_cookies_17track():
+    """Tạo fake cookies cho 17track.net dựa trên cookies thực tế để tránh tooltip"""
+    cookies = []
+    
+    # Cookies quan trọng từ 17track.net (dựa trên cookies thực tế)
+    current_time = int(time.time())
+    random_uuid = str(uuid.uuid4())
+    random_ga_id = random.randint(100000000, 999999999)
+    
+    base_cookies = [
+        # Session cookie (quan trọng - giúp tránh bị coi là user mới)
+        {
+            'name': '__AP_SESSION__',
+            'value': random_uuid.replace('-', ''),
+            'domain': 't.17track.net',
+            'path': '/'
+        },
+        # Google Analytics cookies (fake format tương tự)
+        {
+            'name': '_ga',
+            'value': f'GA1.1.{random_ga_id}.{current_time}',
+            'domain': '.17track.net',
+            'path': '/'
+        },
+        {
+            'name': '_ga_DFLC2LRX2J',
+            'value': f'GS2.1.s{current_time}$o5$g1$t{current_time}$j60$l1$h{random.randint(1000000000, 9999999999)}',
+            'domain': '.17track.net',
+            'path': '/'
+        },
+        # Tracking cookies
+        {
+            'name': '_im_vid',
+            'value': ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=26)),
+            'domain': 't.17track.net',
+            'path': '/'
+        },
+        {
+            'name': '_pubcid',
+            'value': str(uuid.uuid4()),
+            'domain': '.17track.net',
+            'path': '/'
+        },
+        {
+            'name': '_gcl_au',
+            'value': f'1.1.{random.randint(1000000000, 9999999999)}.{current_time}',
+            'domain': '.17track.net',
+            'path': '/'
+        },
+        # Cookies để tránh tooltip (thử các tên có thể)
+        {
+            'name': 'joyride',
+            'value': 'completed',
+            'domain': '.17track.net',
+            'path': '/'
+        },
+        {
+            'name': 'has_seen_welcome',
+            'value': 'true',
+            'domain': '.17track.net',
+            'path': '/'
+        }
+    ]
+    
+    # Thêm cookies ngẫu nhiên để mỗi request khác nhau (mô phỏng tracking cookies)
+    for _ in range(random.randint(2, 5)):
+        cookie_name = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=random.randint(8, 15)))
+        cookie_value = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=random.randint(10, 30)))
+        cookies.append({
+            'name': cookie_name,
+            'value': cookie_value,
+            'domain': '.17track.net',
+            'path': '/'
+        })
+    
+    cookies.extend(base_cookies)
+    return cookies
+
 def generate_fake_cookies():
     """Tạo fake cookies để bypass anti-bot"""
     cookies = []
-
+    
     # Cookie cơ bản cho 1688.com
     base_cookies = [
         {
@@ -358,10 +437,12 @@ def _build_chrome_driver(headless: bool = True):
         webdriver.Chrome: Chrome WebDriver instance
     """
     options = ChromeOptions()
-    # Base options (theo pattern Pugo)
+    # Base options (theo pattern Pugo) - flags để tránh crash
     options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-dev-shm-usage")  # Tránh /dev/shm issues
+    options.add_argument("--disable-gpu")  # Tránh GPU issues trong headless
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-setuid-sandbox")
     options.add_argument("--window-size=1366,768")
     options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0 Safari/537.36")
     options.add_argument("--disable-blink-features=AutomationControlled")
@@ -669,35 +750,73 @@ def _extract_17track_timeline_html(html: str, tracking_number: str) -> str:
             })
             logger.info(f"Tìm thấy container với {events_count} events")
     
+    # BƯỚC 2.5: Kiểm tra xem có events nào không nằm trong div.relative không (ví dụ: Sync Time events)
+    # Nếu số events trong div.relative < tổng số events, có thể có events ở nơi khác
+    total_events_in_relative = sum(c['events_count'] for c in all_containers_with_events)
+    if total_events_in_relative < len(time_elements):
+        missing_events = len(time_elements) - total_events_in_relative
+        logger.warning(f"Có {missing_events} events không nằm trong div.relative, có thể là Sync Time events hoặc events từ phần khác")
+        
+        # Tìm parent containers của các events không nằm trong div.relative
+        for time_el in time_elements:
+            # Kiểm tra xem event này đã nằm trong container nào chưa
+            found_in_container = False
+            for container_info in all_containers_with_events:
+                if time_el in container_info['container'].select('span.yq-time'):
+                    found_in_container = True
+                    break
+            
+            if not found_in_container:
+                # Tìm parent container của event này
+                parent = time_el.find_parent('div', class_=lambda x: x and 'relative' in str(x))
+                if not parent:
+                    # Thử tìm parent khác (có thể là div khác)
+                    parent = time_el.find_parent(['div', 'section', 'article'])
+                    if parent:
+                        # Kiểm tra xem parent này có chứa nhiều events không
+                        events_in_parent = len(parent.select('span.yq-time'))
+                        if events_in_parent > 0:
+                            # Thêm vào danh sách containers
+                            all_containers_with_events.append({
+                                'container': parent,
+                                'events_count': events_in_parent
+                            })
+                            logger.info(f"Tìm thấy container bổ sung với {events_in_parent} events (không phải div.relative)")
+    
     # Sắp xếp theo số lượng events (nhiều nhất trước)
     all_containers_with_events.sort(key=lambda x: x['events_count'], reverse=True)
     
-    # BƯỚC 3: Extract HTML - merge tất cả containers có events
+    # BƯỚC 3: Extract HTML - LUÔN merge tất cả containers có events (không chỉ lấy container lớn nhất)
     if all_containers_with_events:
-        # Nếu chỉ có 1 container, dùng container đó
-        if len(all_containers_with_events) == 1:
-            timeline_container = all_containers_with_events[0]['container']
-            timeline_html = str(timeline_container)
-            logger.info(f"Chỉ có 1 container, extract trực tiếp: {all_containers_with_events[0]['events_count']} events")
-        else:
-            # Nếu có nhiều containers (nhiều carriers), merge tất cả
-            logger.info(f"Có {len(all_containers_with_events)} containers với events, merge tất cả...")
+        # LUÔN merge tất cả containers để đảm bảo lấy đầy đủ events từ tất cả carriers
+        logger.info(f"Có {len(all_containers_with_events)} containers với events, merge tất cả để lấy đầy đủ...")
+        
+        # Tạo container mới chứa tất cả events
+        merged_html_parts = []
+        total_events = 0
+        seen_events = set()  # Track events đã thêm để tránh duplicate
+        
+        for container_info in all_containers_with_events:
+            container = container_info['container']
+            events_in_container = container.select('span.yq-time')
             
-            # Tạo container mới chứa tất cả events
-            merged_html_parts = []
-            total_events = 0
+            # Kiểm tra xem có events nào chưa được thêm chưa
+            new_events_count = 0
+            for event in events_in_container:
+                event_id = id(event)  # Dùng id để track unique events
+                if event_id not in seen_events:
+                    seen_events.add(event_id)
+                    new_events_count += 1
             
-            for container_info in all_containers_with_events:
-                container = container_info['container']
-                events_in_container = container.select('span.yq-time')
+            if new_events_count > 0:
                 total_events += len(events_in_container)
-                
                 # Lấy HTML của container này
                 merged_html_parts.append(str(container))
-            
-            # Merge tất cả containers
-            timeline_html = '\n'.join(merged_html_parts)
-            logger.info(f"Đã merge {len(all_containers_with_events)} containers, tổng {total_events} events")
+                logger.info(f"Thêm container với {len(events_in_container)} events (trong đó {new_events_count} events mới)")
+        
+        # Merge tất cả containers
+        timeline_html = '\n'.join(merged_html_parts)
+        logger.info(f"Đã merge {len(merged_html_parts)} containers, tổng {total_events} events")
         
         # Kiểm tra số lượng events trong HTML đã extract
         events_in_html = len(BeautifulSoup(timeline_html, 'html.parser').select('span.yq-time'))
@@ -720,7 +839,7 @@ def _parse_17track_timeline(html: str, tracking_number: str) -> Dict[str, Any]:
     NOTE: Phương án này là fallback, ưu tiên sử dụng safeHtml từ _extract_17track_timeline_html.
     
     Args:
-        html: HTML content từ 17track.net sau khi đã translation
+        html: HTML content (có thể là full HTML hoặc timeline_html đã extract)
         tracking_number: Mã vận đơn để validate
         
     Returns:
@@ -732,24 +851,36 @@ def _parse_17track_timeline(html: str, tracking_number: str) -> Dict[str, Any]:
     
     logger.info(f"Bắt đầu parse HTML cho tracking number: {tracking_number}")
     
-    # Tìm container timeline với nhiều fallback selectors
-    timeline_container = None
-    selectors = [
-        'div.space-y-2 > div.space-y-3',
-        'div.space-y-3',
-        '[class*="space-y-3"]',
-        '[class*="timeline"]'
-    ]
+    # Kiểm tra xem đây có phải là timeline_html đã extract (chỉ có div.relative) không
+    # Nếu có nhiều div.relative với span.yq-time, đây là timeline_html đã extract
+    relative_divs_with_events = soup.select('div.relative')
+    time_elements = soup.select('span.yq-time')
     
-    for selector in selectors:
-        try:
-            timeline_container = soup.select_one(selector)
-            if timeline_container:
-                logger.info(f"Tìm thấy timeline container với selector: {selector}")
-                break
-        except Exception as e:
-            logger.warning(f"Selector {selector} failed: {e}")
-            continue
+    is_extracted_timeline = len(relative_divs_with_events) > 0 and len(time_elements) > 0
+    
+    if is_extracted_timeline:
+        logger.info(f"Phát hiện timeline HTML đã extract ({len(relative_divs_with_events)} div.relative, {len(time_elements)} events), parse trực tiếp...")
+        # Parse trực tiếp từ div.relative containers
+        timeline_container = soup  # Dùng soup làm container vì timeline_html chỉ có div.relative
+    else:
+        # Tìm container timeline với nhiều fallback selectors (cho full HTML)
+        timeline_container = None
+        selectors = [
+            'div.space-y-2 > div.space-y-3',
+            'div.space-y-3',
+            '[class*="space-y-3"]',
+            '[class*="timeline"]'
+        ]
+        
+        for selector in selectors:
+            try:
+                timeline_container = soup.select_one(selector)
+                if timeline_container:
+                    logger.info(f"Tìm thấy timeline container với selector: {selector}")
+                    break
+            except Exception as e:
+                logger.warning(f"Selector {selector} failed: {e}")
+                continue
     
     if timeline_container:
         # Validate tracking number có trong page không
@@ -757,36 +888,47 @@ def _parse_17track_timeline(html: str, tracking_number: str) -> Dict[str, Any]:
         if tracking_number and tracking_number in page_text:
             matched = True
         
-        # Extract các events từ timeline với nhiều fallback selectors
-        all_events = []
-        event_selectors = [
-            'div.flex.gap-3',
-            'div[class*="flex"][class*="gap"]',
-            'div[class*="relative"]'
-        ]
-        
-        for selector in event_selectors:
-            try:
-                all_events = timeline_container.select(selector)
-                if all_events:
-                    logger.info(f"Tìm thấy {len(all_events)} events với selector: {selector}")
-                    break
-            except Exception:
-                continue
-        
-        # Lọc các events có class chứa min-h-7 (timeline items)
-        events = []
-        for event in all_events:
-            classes = event.get('class', [])
-            class_str = ' '.join(classes) if classes else ''
-            # Kiểm tra có class min-h-7 hoặc có relative (timeline items thường có)
-            if 'min-h-7' in classes or 'relative' in classes or 'mb-' in class_str:
-                events.append(event)
-        
-        if not events:
-            # Fallback: sử dụng tất cả div.flex.gap-3
-            events = all_events
-            logger.info(f"Sử dụng fallback, tổng {len(events)} events")
+        # Extract các events từ timeline
+        # Nếu là timeline_html đã extract, parse trực tiếp từ div.relative
+        if is_extracted_timeline:
+            # Parse trực tiếp từ div.relative containers (timeline_html đã extract)
+            events = []
+            for div in relative_divs_with_events:
+                # Tìm tất cả div.flex.gap-3 trong mỗi div.relative
+                flex_divs = div.select('div.flex.gap-3')
+                events.extend(flex_divs)
+            logger.info(f"Parse từ timeline HTML đã extract: {len(events)} events từ {len(relative_divs_with_events)} containers")
+        else:
+            # Extract các events từ timeline với nhiều fallback selectors (cho full HTML)
+            all_events = []
+            event_selectors = [
+                'div.flex.gap-3',
+                'div[class*="flex"][class*="gap"]',
+                'div[class*="relative"]'
+            ]
+            
+            for selector in event_selectors:
+                try:
+                    all_events = timeline_container.select(selector)
+                    if all_events:
+                        logger.info(f"Tìm thấy {len(all_events)} events với selector: {selector}")
+                        break
+                except Exception:
+                    continue
+            
+            # Lọc các events có class chứa min-h-7 (timeline items)
+            events = []
+            for event in all_events:
+                classes = event.get('class', [])
+                class_str = ' '.join(classes) if classes else ''
+                # Kiểm tra có class min-h-7 hoặc có relative (timeline items thường có)
+                if 'min-h-7' in classes or 'relative' in classes or 'mb-' in class_str:
+                    events.append(event)
+            
+            if not events:
+                # Fallback: sử dụng tất cả div.flex.gap-3
+                events = all_events
+                logger.info(f"Sử dụng fallback, tổng {len(events)} events")
         
         logger.info(f"Tổng số events để parse: {len(events)}")
         
@@ -1035,15 +1177,34 @@ def _handle_17track_reference(driver, wait, phone_number: Optional[str] = None) 
         phone_number = "0971037741"
     
     try:
-        # Kiểm tra có message "Please enter a reference" không (với timeout ngắn)
+        # Kiểm tra có message "Please enter a reference to view the package details" không (với timeout ngắn)
         reference_message = None
         try:
             # Dùng WebDriverWait với timeout ngắn (5s) để tránh treo
             short_wait = WebDriverWait(driver, 5)
-            reference_message = short_wait.until(
-                EC.presence_of_element_located((By.XPATH, 
-                    "//span[contains(text(), 'Please enter a reference')]"))
-            )
+            # Pattern mới: tìm text "Please enter a reference to view the package details" 
+            # Có thể ở trong span hoặc p tag
+            try:
+                reference_message = short_wait.until(
+                    EC.presence_of_element_located((By.XPATH, 
+                        "//span[contains(text(), 'Please enter a reference to view the package details')]"))
+                )
+                logger.info("Phát hiện message yêu cầu reference (pattern: span)")
+            except Exception:
+                # Thử tìm trong p tag
+                try:
+                    reference_message = short_wait.until(
+                        EC.presence_of_element_located((By.XPATH, 
+                            "//p[contains(text(), 'Please enter a reference to view the package details')]"))
+                    )
+                    logger.info("Phát hiện message yêu cầu reference (pattern: p tag)")
+                except Exception:
+                    # Fallback: tìm text ngắn hơn
+                    reference_message = short_wait.until(
+                        EC.presence_of_element_located((By.XPATH, 
+                            "//*[contains(text(), 'Please enter a reference')]"))
+                    )
+                    logger.info("Phát hiện message yêu cầu reference (pattern: fallback)")
         except Exception:
             # Không có message, không cần reference
             logger.info("Không cần reference, tiếp tục...")
@@ -1052,15 +1213,28 @@ def _handle_17track_reference(driver, wait, phone_number: Optional[str] = None) 
         if reference_message:
             logger.info("Phát hiện yêu cầu reference, đang xử lý...")
             
-            # Tìm và click link "reference"
+            # Tìm và click link "reference" - chỉ dùng pattern mới (aria-haspopup="dialog")
             try:
+                # Pattern mới: span có aria-haspopup="dialog" và chứa text "reference"
                 reference_link = driver.find_element(By.XPATH,
-                    "//span[contains(text(), 'reference') and @type='button']")
-                reference_link.click()
-                logger.info("Đã click link reference")
+                    "//span[contains(text(), 'reference') and @aria-haspopup='dialog']")
+                logger.info("Tìm thấy reference link (pattern: aria-haspopup='dialog')")
+                
+                # Scroll vào view trước khi click
+                driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", reference_link)
+                time.sleep(0.5)
+                
+                # Thử click bằng JavaScript nếu click thường không được
+                try:
+                    reference_link.click()
+                    logger.info("Đã click link reference bằng Selenium")
+                except Exception:
+                    driver.execute_script("arguments[0].click();", reference_link)
+                    logger.info("Đã click link reference bằng JavaScript")
+                
                 time.sleep(1)
             except Exception as e:
-                logger.warning(f"Không tìm thấy link reference: {e}")
+                logger.warning(f"Không tìm thấy hoặc không click được link reference: {e}")
                 return (True, False)
             
             # Chờ dialog xuất hiện
@@ -1213,22 +1387,26 @@ def _configure_17track_translation(driver, wait) -> bool:
         
         # Đợi translation hoàn tất với polling (theo pattern test web - ngay sau khi bật toggle)
         logger.info("Đang đợi translation hoàn tất (polling pattern)...")
-        # Chờ thêm một chút sau khi bật toggle để translation bắt đầu
-        time.sleep(3)
+        # Chờ thêm một chút sau khi bật toggle để translation bắt đầu (tối ưu: giảm từ 3s xuống 2s)
+        time.sleep(2)
         
         # Keywords để detect Vietnamese text (mở rộng thêm để detect cả tiếng Trung đầy đủ)
         vietnamese_keywords = ['thành phố', 'đã', 'được', 'giao', 'nhận', 'chuyển', 'kho', 'tàu', 'chuyến']
         
-        # Polling để đợi translation hoàn tất cho timeline events (theo pattern test web CHÍNH XÁC)
+        # Polling để đợi translation hoàn tất cho timeline events (tối ưu: giảm từ 40s xuống 25s)
         timeline_translated = False
         
-        # Loop đơn giản như test web: for i in range(40) - tăng thời gian đợi để translation hoàn tất
-        logger.info("Bắt đầu polling loop (40 iterations = 40s)...")
-        for i in range(40):
-            time.sleep(1)
+        # Tối ưu: Giảm iterations từ 40 → 25, check mỗi 2s thay vì 1s để giảm overhead
+        # Tổng thời gian: 25 iterations x 2s = 50s max, nhưng thường exit sớm hơn
+        max_iterations = 25
+        check_interval = 2  # Check mỗi 2s thay vì 1s
+        logger.info(f"Bắt đầu polling loop ({max_iterations} iterations x {check_interval}s = tối đa {max_iterations * check_interval}s)...")
+        for i in range(max_iterations):
+            time.sleep(check_interval)
             # Log mỗi 5 giây để theo dõi
-            if (i + 1) % 5 == 0 or i == 0:
-                logger.info(f"Polling iteration {i+1}/40")
+            elapsed_time = (i + 1) * check_interval
+            if elapsed_time % 5 == 0 or i == 0:
+                logger.info(f"Polling iteration {i+1}/{max_iterations} (đã đợi {elapsed_time}s)...")
             
             try:
                 # Kiểm tra timeline container - tìm lại mỗi lần để tránh stale element (theo test web)
@@ -1269,24 +1447,28 @@ def _configure_17track_translation(driver, wait) -> bool:
                                 break
                     
                     if found_vietnamese:
-                        logger.info(f"✓ Đã phát hiện text tiếng Việt trong timeline events sau {i+1}s")
+                        elapsed_time = (i + 1) * check_interval
+                        logger.info(f"✓ Đã phát hiện text tiếng Việt trong timeline events sau {elapsed_time}s (iteration {i+1}/{max_iterations})")
                         timeline_translated = True
                         break
                 
                 if timeline_translated:
                     break
             except Exception as e:
-                logger.warning(f"Lỗi khi kiểm tra translation sau {i+1}s: {e}")
+                elapsed_time = (i + 1) * check_interval
+                logger.warning(f"Lỗi khi kiểm tra translation sau {elapsed_time}s: {e}")
                 # Nếu là timeout, log chi tiết
                 if 'timeout' in str(e).lower() or 'timed out' in str(e).lower():
-                    logger.warning(f"Timeout khi lấy page_source sau {i+1}s - có thể driver đang chậm")
+                    logger.warning(f"Timeout khi lấy page_source sau {elapsed_time}s - có thể driver đang chậm")
             
             # Log mỗi 5 giây (theo pattern test web) - log NGAY CẢ KHI CÓ EXCEPTION
-            if (i + 1) % 5 == 0:
-                logger.info(f"Chưa thấy text tiếng Việt sau {i+1}s, tiếp tục đợi...")
+            elapsed_time = (i + 1) * check_interval
+            if elapsed_time % 5 == 0:
+                logger.info(f"Chưa thấy text tiếng Việt sau {elapsed_time}s, tiếp tục đợi...")
         
         if not timeline_translated:
-            logger.warning(f"Đã chờ 40s nhưng chưa phát hiện text tiếng Việt trong timeline events - thử scroll lại timeline")
+            max_wait_time = max_iterations * check_interval
+            logger.warning(f"Đã chờ {max_wait_time}s nhưng chưa phát hiện text tiếng Việt trong timeline events - thử scroll lại timeline")
             # Thử scroll lại timeline để trigger translation (theo pattern codebase - đơn giản, không threading)
             try:
                 # Kiểm tra driver còn sống
@@ -1299,10 +1481,10 @@ def _configure_17track_translation(driver, wait) -> bool:
                     try:
                         timeline_elements = driver.find_elements(By.CSS_SELECTOR, 'span.yq-time')
                         if timeline_elements:
-                            # Scroll đến event cuối cùng để trigger translation (theo pattern codebase)
+                            # Scroll đến event cuối cùng để trigger translation (tối ưu: giảm từ 2s xuống 1s)
                             logger.info(f"Scroll đến event cuối cùng để trigger translation...")
                             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", timeline_elements[-1])
-                            time.sleep(2)  # Chờ translation sau scroll
+                            time.sleep(1)  # Chờ translation sau scroll
                             
                             # Kiểm tra lại một lần nữa (đơn giản, không phức tạp)
                             html_check = driver.page_source
@@ -1337,6 +1519,125 @@ def _configure_17track_translation(driver, wait) -> bool:
         logger.error(f"Lỗi khi cấu hình translation: {e}")
         return False
 
+def _extract_17track_via_copy_details(driver, wait, tracking_number: str) -> Optional[str]:
+    """
+    Thử extract tracking info bằng cách intercept copy event từ button "Copy details".
+    Best practice: Intercept copy event để lấy data trực tiếp, không cần đọc clipboard.
+    
+    Args:
+        driver: Selenium WebDriver
+        wait: WebDriverWait instance
+        tracking_number: Mã vận đơn để validate
+        
+    Returns:
+        str: Text content từ copy event hoặc None nếu không lấy được
+    """
+    try:
+        logger.info("Thử extract tracking info bằng cách intercept copy event từ 'Copy details'...")
+        
+        # Tìm button "Copy details"
+        try:
+            copy_button = wait.until(
+                EC.element_to_be_clickable((By.XPATH, 
+                    "//button[contains(@title, 'Copy detailed tracking results') or contains(text(), 'Copy details')]"))
+            )
+            logger.info("Tìm thấy button 'Copy details'")
+        except Exception as e:
+            logger.warning(f"Không tìm thấy button 'Copy details': {e}")
+            return None
+        
+        # Best practice: Intercept copy event để lấy data trực tiếp (không cần clipboard permission)
+        try:
+            # Inject script để intercept copy event và capture data
+            copied_data = driver.execute_script("""
+                // Tạo biến global để lưu data
+                window.__copiedData = null;
+                
+                // Intercept copy event
+                document.addEventListener('copy', function(e) {
+                    // Lấy data từ clipboard event
+                    const selection = window.getSelection().toString();
+                    if (selection) {
+                        window.__copiedData = selection;
+                    } else {
+                        // Nếu không có selection, thử lấy từ clipboardData
+                        if (e.clipboardData) {
+                            const data = e.clipboardData.getData('text/plain');
+                            if (data) {
+                                window.__copiedData = data;
+                            }
+                        }
+                    }
+                }, true);
+                
+                // Trigger click để copy
+                arguments[0].click();
+                
+                // Đợi một chút để event được trigger
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve(window.__copiedData || null);
+                    }, 500);
+                });
+            """, copy_button)
+            
+            if copied_data and len(copied_data) > 100:
+                logger.info(f"✓ Đã lấy được text từ copy event ({len(copied_data)} ký tự)")
+                # Validate: kiểm tra có chứa tracking number không
+                if tracking_number in copied_data:
+                    logger.info("✓ Copy event text chứa tracking number, hợp lệ")
+                    return copied_data
+                else:
+                    logger.warning("⚠ Copy event text không chứa tracking number")
+            else:
+                logger.warning("⚠ Copy event text quá ngắn hoặc rỗng")
+        except Exception as e:
+            logger.warning(f"Không thể intercept copy event: {e}")
+            # Fallback: Thử cách khác - trigger copy và xử lý alert
+        
+        # Fallback 2: Thử với alert handling (nếu có alert xuất hiện)
+        try:
+            # Xử lý alert nếu có
+            try:
+                alert = driver.switch_to.alert
+                alert_text = alert.text
+                logger.info(f"Phát hiện alert: {alert_text}")
+                # Accept alert (có thể là permission request)
+                alert.accept()
+                time.sleep(0.5)
+            except Exception:
+                # Không có alert, tiếp tục
+                pass
+            
+            # Thử đọc clipboard sau khi xử lý alert
+            try:
+                # Cấp quyền clipboard bằng CDP (best practice)
+                driver.execute_cdp_cmd('Browser.grantPermissions', {
+                    'origin': driver.current_url.split('/')[0] + '//' + driver.current_url.split('/')[2],
+                    'permissions': ['clipboard-read', 'clipboard-write']
+                })
+                
+                clipboard_text = driver.execute_script("""
+                    return navigator.clipboard.readText().then(
+                        text => text,
+                        err => null
+                    );
+                """)
+                
+                if clipboard_text and len(clipboard_text) > 100 and tracking_number in clipboard_text:
+                    logger.info(f"✓ Đã lấy được text từ clipboard sau khi cấp quyền ({len(clipboard_text)} ký tự)")
+                    return clipboard_text
+            except Exception as e2:
+                logger.warning(f"Không thể đọc clipboard sau khi cấp quyền: {e2}")
+        except Exception as e3:
+            logger.warning(f"Lỗi trong fallback 2: {e3}")
+        
+        return None
+        
+    except Exception as e:
+        logger.warning(f"Lỗi khi extract via copy details: {e}")
+        return None
+
 def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Optional[str] = None) -> Dict[str, Any]:
     """
     Thực hiện tracking trên 17track.net với Selenium.
@@ -1353,59 +1654,23 @@ def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Op
     try:
         logger.info(f"Bắt đầu track 17track cho: {tracking_number}")
         
-        # Bước 1: Truy cập trang chủ 17track
-        logger.info("Truy cập https://www.17track.net/en...")
+        # Bước 1: Redirect trực tiếp đến URL tracking (TỐI ƯU - bỏ qua trang chủ, điền form, click)
+        tracking_url = f'https://t.17track.net/en#nums={tracking_number}'
+        logger.info(f"Redirect trực tiếp đến: {tracking_url}")
         try:
-            driver.get('https://www.17track.net/en')
-            time.sleep(2)
+            driver.get(tracking_url)
+            time.sleep(2)  # Chờ page load với tracking number
         except Exception as e:
-            logger.error(f"Lỗi khi truy cập trang chủ: {e}")
-            return {'html': '', 'success': False, 'error': f'Failed to load page: {str(e)}'}
+            logger.error(f"Lỗi khi redirect trực tiếp: {e}")
+            return {'html': '', 'success': False, 'error': f'Failed to load tracking page: {str(e)}'}
         
         # Kiểm tra driver còn sống trước khi tiếp tục
         try:
-            driver.current_url
+            current_url = driver.current_url
+            logger.info(f"Đã load trang tracking: {current_url}")
         except Exception:
-            logger.error("Driver bị đóng sau khi load trang chủ")
+            logger.error("Driver bị đóng sau khi load trang tracking")
             return {'html': '', 'success': False, 'error': 'Driver closed after page load'}
-        
-        # Bước 2: Tìm và điền textarea
-        logger.info("Tìm textarea để điền tracking number...")
-        try:
-            textarea = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, '#auto-size-textarea'))
-            )
-            textarea.clear()
-            textarea.send_keys(tracking_number)
-            logger.info(f"Đã điền tracking number: {tracking_number}")
-            time.sleep(0.5)
-        except Exception as e:
-            logger.error(f"Lỗi khi điền tracking number: {e}")
-            return {'html': '', 'success': False, 'error': f'Failed to input tracking: {str(e)}'}
-        
-        # Bước 3: Click nút TRACK
-        logger.info("Tìm và click nút TRACK...")
-        try:
-            track_button = wait.until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, '.batch_track_search-area__9BaOs'))
-            )
-            track_button.click()
-            logger.info("Đã click nút TRACK")
-        except Exception as e:
-            logger.error(f"Lỗi khi click TRACK: {e}")
-            return {'html': '', 'success': False, 'error': f'Failed to click track: {str(e)}'}
-        
-        # Bước 4: Chờ redirect
-        logger.info("Đang chờ redirect...")
-        try:
-            wait.until(lambda d: '#nums=' in d.current_url or 't.17track.net' in d.current_url)
-            time.sleep(2)
-        except Exception as e:
-            logger.error(f"Lỗi khi chờ redirect: {e}")
-            return {'html': '', 'success': False, 'error': f'Failed to redirect: {str(e)}'}
-        
-        current_url = driver.current_url
-        logger.info(f"Đã redirect đến: {current_url}")
         
         # Bước 4.5: Xử lý tooltip (react-joyride) nếu xuất hiện (TRƯỚC reference dialog)
         logger.info("Kiểm tra tooltip...")
@@ -1413,9 +1678,9 @@ def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Op
         if not tooltip_handled:
             logger.warning("Tooltip không được xử lý thành công, tiếp tục...")
         
-        # Chờ một chút sau khi đóng tooltip
+        # Chờ một chút sau khi đóng tooltip (tối ưu: giảm từ 1s xuống 0.5s)
         if tooltip_handled:
-            time.sleep(1)
+            time.sleep(0.5)
         
         # Bước 5: Xử lý reference dialog (nếu có)
         logger.info("Kiểm tra reference dialog...")
@@ -1423,13 +1688,13 @@ def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Op
         if reference_needed and not reference_success:
             logger.warning("Reference dialog không được xử lý thành công")
         
-        # Chờ thêm một chút sau khi xử lý reference
+        # Chờ thêm một chút sau khi xử lý reference (tối ưu: giảm từ 2s xuống 1s)
         if reference_needed:
-            time.sleep(2)
+            time.sleep(1)
         
-        # Chờ để đảm bảo page đã load hoàn toàn (theo pattern test web)
+        # Chờ để đảm bảo page đã load hoàn toàn (tối ưu: giảm từ 3s xuống 2s)
         logger.info("Đang chờ page load hoàn toàn...")
-        time.sleep(3)
+        time.sleep(2)
         
         # Bước 6a: Scroll để load events TRƯỚC khi translation (theo pattern test web - đơn giản)
         try:
@@ -1438,10 +1703,24 @@ def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Op
             timeline_elements = driver.find_elements(By.CSS_SELECTOR, 'span.yq-time')
             logger.info(f"Tìm thấy {len(timeline_elements)} events TRƯỚC khi translation")
             
-            # Scroll đến event cuối cùng để load đầy đủ (theo pattern test web)
+            # Kiểm tra: Nếu không có events, có thể yêu cầu xác thực thông tin bảo mật
+            if len(timeline_elements) == 0:
+                logger.warning("Không tìm thấy events TRƯỚC khi translation - có thể yêu cầu xác thực thông tin bảo mật")
+                # Thử scroll và đợi thêm một chút để xem có events xuất hiện không
+                time.sleep(2)
+                timeline_elements = driver.find_elements(By.CSS_SELECTOR, 'span.yq-time')
+                logger.info(f"Sau khi đợi thêm: {len(timeline_elements)} events")
+                
+                # Nếu vẫn không có events, trả về lỗi
+                if len(timeline_elements) == 0:
+                    error_msg = "Đơn hàng này yêu cầu xác thực thông tin bảo mật. Xin vui lòng liên hệ CSKH để được thông tin chi tiết."
+                    logger.error(error_msg)
+                    return {'html': '', 'success': False, 'error': error_msg}
+            
+            # Scroll đến event cuối cùng để load đầy đủ (tối ưu: giảm từ 2s xuống 1s)
             if timeline_elements:
                 driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", timeline_elements[-1])
-                time.sleep(2)
+                time.sleep(1)
                 # Đếm lại sau scroll
                 timeline_elements = driver.find_elements(By.CSS_SELECTOR, 'span.yq-time')
                 logger.info(f"Sau scroll: {len(timeline_elements)} events")
@@ -1486,7 +1765,17 @@ def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Op
             logger.error("Driver bị đóng trước khi lấy HTML")
             return {'html': '', 'success': False, 'error': 'Driver closed before getting HTML'}
         
-        # Bước 7: Lấy HTML sau khi đã xử lý
+        # Bước 7: Thử extract bằng "Copy details" trước (TỐI ƯU MỚI - nhanh hơn parse HTML)
+        logger.info("Thử extract tracking info bằng 'Copy details'...")
+        clipboard_text = _extract_17track_via_copy_details(driver, wait, tracking_number)
+        
+        if clipboard_text:
+            logger.info("✓ Đã lấy được data từ clipboard, sẽ parse text trực tiếp...")
+            # TODO: Parse clipboard text trực tiếp thay vì convert sang HTML
+            # Tạm thời vẫn dùng HTML parsing để đảm bảo tương thích
+            logger.info("Sử dụng clipboard text để parse timeline (sẽ implement sau)...")
+        
+        # Bước 8: Lấy HTML sau khi đã xử lý (fallback nếu clipboard không hoạt động)
         logger.info("Đang lấy HTML content...")
         try:
             html = driver.page_source
@@ -1497,7 +1786,8 @@ def _track_17track_selenium(driver, wait, tracking_number: str, phone_number: Op
         
         return {
             'html': html,
-            'success': True
+            'success': True,
+            'clipboard_text': clipboard_text if clipboard_text else None  # Thêm clipboard text vào response
         }
         
     except Exception as e:
@@ -1579,33 +1869,30 @@ def track_17track():
         html = track_result['html']
         
         # ƯU TIÊN: Extract timeline HTML để render trực tiếp (đơn giản, giữ styling)
+        # Extract timeline HTML - đơn giản: lấy được bao nhiêu render bấy nhiêu
         timeline_html = _extract_17track_timeline_html(html, tracking_number)
         
-        # Parse timeline từ HTML (fallback cho search/sort/filter nếu cần)
-        parsed = _parse_17track_timeline(html, tracking_number)
-        
-        # Sanitize timeline HTML để render an toàn (ưu tiên)
+        # Sanitize timeline HTML để render an toàn
         safe_timeline_html = ''
         if timeline_html:
             try:
                 safe_timeline_html = _sanitize_raw_html(timeline_html)
-                logger.info(f"Đã sanitize timeline HTML, độ dài: {len(safe_timeline_html)} characters")
+                events_count = len(BeautifulSoup(safe_timeline_html, 'html.parser').select('span.yq-time'))
+                logger.info(f"Đã extract và sanitize timeline HTML: {len(safe_timeline_html)} characters, {events_count} events")
             except Exception as e:
                 logger.warning(f"Lỗi khi sanitize timeline HTML: {e}")
         else:
-            # Fallback: Nếu không extract được timeline HTML, sử dụng rawHtml
-            logger.warning("Không extract được timeline HTML, sử dụng rawHtml")
-            try:
-                safe_timeline_html = _sanitize_raw_html(parsed.get('rawHtml') or '')
-            except Exception:
-                safe_timeline_html = ''
+            logger.warning("Không extract được timeline HTML")
         
-        # Gán safeHtml (ưu tiên render trực tiếp)
+        # Parse timeline từ HTML (fallback cho search/sort/filter nếu frontend cần)
+        # Đơn giản: chỉ parse nếu cần, không phức tạp hóa
+        parsed = _parse_17track_timeline(timeline_html if timeline_html else html, tracking_number)
+        
+        # Gán safeHtml - đây là phần chính để render
         parsed['safeHtml'] = safe_timeline_html
         
-        # Nếu safeHtml có nội dung, ưu tiên sử dụng nó thay vì timeline parsed
-        if safe_timeline_html and len(safe_timeline_html) > 100:
-            logger.info("Ưu tiên sử dụng safeHtml để render (timeline parsed giữ làm fallback)")
+        if safe_timeline_html:
+            logger.info(f"✓ safeHtml sẵn sàng để render: {len(safe_timeline_html)} characters")
         
         elapsed = round((time.time() - start_ts) * 1000)
         parsed['elapsedMs'] = elapsed
