@@ -2352,6 +2352,125 @@ def route_parse_pugo():
         logger.error(f"Parser error: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ==================== VIPO.VN ENDPOINTS ====================
+
+@swag_from({
+    'tags': ['extractor'],
+    'summary': 'Extractor Vipo.vn (raw) - theo dõi dữ liệu thô như backend extractor',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=987315762638'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Raw extractor output', 'schema': {'type': 'object'}}}
+})
+@app.route('/extract-vipo', methods=['POST'])
+def route_extract_vipo():
+    try:
+        from py_extractors.extractor_vipo import extractor_vipo
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        result = extractor_vipo.extract(url)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Extractor error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Vipo.vn (chuẩn hoá) - nhận raw JSON từ extractor, trả về format chuẩn',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'raw_data': {
+                    'type': 'object',
+                    'description': 'Raw JSON output từ extractor (có status, url, raw_data, sourceId, ...)',
+                    'example': {
+                        'status': 'success',
+                        'url': 'https://item.taobao.com/item.htm?id=987315762638',
+                        'raw_data': {
+                            'status': 'success',
+                            'data': {
+                                'product_name': 'Product Name',
+                                'main_img_url_list': ['https://example.com/image1.jpg'],
+                                'product_id': '987315762638'
+                            }
+                        },
+                        'sourceId': '987315762638',
+                        'sourceType': 'vipo'
+                    }
+                }
+            },
+            'required': ['raw_data']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-vipo', methods=['POST'])
+def route_transform_vipo():
+    try:
+        from py_transformers.transformer_vipo import transformer_vipo
+        payload = request.get_json() or {}
+
+        # Chấp nhận 2 dạng body:
+        # 1) { "raw_data": { ... } }  ← chuẩn
+        # 2) Toàn bộ JSON từ extractor (có key "status" ở root)  ← linh hoạt
+        if isinstance(payload, dict) and 'raw_data' in payload:
+            raw_input = payload
+        elif isinstance(payload, dict) and 'status' in payload:
+            raw_input = { 'raw_data': payload }
+        else:
+            return jsonify({'error': 'Body phải là {"raw_data": {...}} hoặc JSON có key "status"'}), 400
+
+        transformed = transformer_vipo.transform(raw_input)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Vipo.vn từ URL (tự động extract + transform)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=987315762638'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-vipo-from-url', methods=['POST'])
+def route_transform_vipo_from_url():
+    try:
+        from py_extractors.extractor_vipo import extractor_vipo
+        from py_transformers.transformer_vipo import transformer_vipo
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        raw = extractor_vipo.extract(url)
+        transformed = transformer_vipo.transform(raw)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 
 if __name__ == '__main__':
