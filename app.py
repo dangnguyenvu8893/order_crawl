@@ -2433,11 +2433,23 @@ def route_transform_vipo():
         else:
             return jsonify({'error': 'Body phải là {"raw_data": {...}} hoặc JSON có key "status"'}), 400
 
+        logger.debug(f"Transform Vipo: raw_input keys: {list(raw_input.keys()) if isinstance(raw_input, dict) else 'not a dict'}")
+        if 'raw_data' in raw_input:
+            logger.debug(f"Transform Vipo: raw_data keys: {list(raw_input['raw_data'].keys())[:10] if isinstance(raw_input.get('raw_data'), dict) else 'not a dict'}")
+
         transformed = transformer_vipo.transform(raw_input)
+        
+        # Log kết quả
+        logger.debug(f"Transform Vipo: result keys: {list(transformed.keys()) if isinstance(transformed, dict) else 'not a dict'}")
+        logger.debug(f"Transform Vipo: name length: {len(transformed.get('name', ''))}")
+        logger.debug(f"Transform Vipo: images count: {len(transformed.get('images', []))}")
+        
         return jsonify(transformed)
     except Exception as e:
+        import traceback
         logger.error(f"Transformer error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
 
 @swag_from({
     'tags': ['transformer'],

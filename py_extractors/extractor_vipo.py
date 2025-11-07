@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 try:
     from selenium import webdriver  # type: ignore
     from selenium.webdriver.common.by import By  # type: ignore
+    from selenium.webdriver.common.keys import Keys  # type: ignore
     from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
     from selenium.webdriver.support import expected_conditions as EC  # type: ignore
     from selenium.webdriver.chrome.options import Options  # type: ignore
@@ -28,6 +29,7 @@ except ImportError as e:
     logger.warning(f"Selenium không khả dụng: {e}")
     webdriver = None
     By = None
+    Keys = None
     WebDriverWait = None
     EC = None
     Options = None
@@ -314,25 +316,16 @@ class ExtractorVipo:
         Trước tiên thử load session đã lưu, nếu không có thì đăng nhập mới
         Returns: (success, vipo_access_token)
         """
-        # Thử load session đã lưu trước
+        # Thử load session đã lưu trước (theo pattern Pugo - không test browser mỗi lần)
         if self.is_session_valid():
             logger.info("Sử dụng session đã lưu...")
             session = self.load_session()
             if session and session.get('vipo_access_token'):
-                # Test session bằng cách truy cập trang chủ
-                driver.get("https://vipomall.vn/")
-                time.sleep(2)
-                
-                # Kiểm tra token còn hợp lệ không
-                token = driver.execute_script("""
-                    return localStorage.getItem('vipo_access_token');
-                """)
-                
-                if token and token == session.get('vipo_access_token'):
-                    logger.info("Session vẫn hợp lệ, không cần đăng nhập lại")
-                    return True, token
-                else:
-                    logger.info("Token không còn hợp lệ, cần đăng nhập lại")
+                # Với Vipo, chỉ cần token để gọi API, không cần test browser mỗi lần
+                # Nếu API call thất bại (401/403) thì mới cần login lại
+                token = session.get('vipo_access_token')
+                logger.info("Session hợp lệ, sử dụng token đã lưu (không test browser)")
+                return True, token
         
         # Đăng nhập mới nếu không có session hoặc session không hợp lệ
         logger.info("Bắt đầu đăng nhập mới...")
@@ -341,42 +334,164 @@ class ExtractorVipo:
             
             # Truy cập trang đăng nhập
             driver.get(self.login_url)
-            time.sleep(2)
+            time.sleep(3)  # Tăng thời gian chờ để page load
             
-            # Tìm và điền SĐT
-            phone_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "emailOrPhone"))
-            )
+            # Kiểm tra xem đã đăng nhập sẵn chưa (có thể đã có token)
+            try:
+                existing_token = driver.execute_script("""
+                    return localStorage.getItem('vipo_access_token');
+                """)
+                if existing_token:
+                    logger.info("Đã tìm thấy token trong localStorage, có thể đã đăng nhập sẵn")
+                    # Kiểm tra xem có ở trang chủ không
+                    current_url = driver.current_url
+                    if "login" not in current_url:
+                        logger.info("Đã đăng nhập sẵn, sử dụng token hiện có")
+                        cookies = driver.get_cookies()
+                        cookie_string = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+                        session_data = {
+                            'vipo_access_token': existing_token,
+                            'vipo_refresh_token': driver.execute_script("return localStorage.getItem('vipo_refresh_token');") or "",
+                            'cookie_string': cookie_string,
+                            'login_time': time.time(),
+                            'user_agent': driver.execute_script("return navigator.userAgent")
+                        }
+                        self.save_session(session_data)
+                        self.save_cookies(cookies)
+                        return True, existing_token
+            except Exception as e:
+                logger.warning(f"Không thể kiểm tra token hiện có: {e}")
+            
+            # Thử nhiều selector cho phone input
+            phone_input = None
+            phone_selectors = [
+                (By.ID, "emailOrPhone"),
+                (By.CSS_SELECTOR, 'input[id="emailOrPhone"]'),
+                (By.CSS_SELECTOR, 'input[formcontrolname="emailOrPhone"]'),
+                (By.CSS_SELECTOR, 'input[type="text"]'),
+                (By.NAME, "emailOrPhone")
+            ]
+            
+            for selector_type, selector_value in phone_selectors:
+                try:
+                    phone_input = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((selector_type, selector_value))
+                    )
+                    logger.info(f"Tìm thấy phone input với selector: {selector_type}={selector_value}")
+                    break
+                except Exception as e:
+                    logger.debug(f"Selector {selector_type}={selector_value} không tìm thấy: {e}")
+                    continue
+            
+            if not phone_input:
+                # Log page source để debug
+                logger.error("Không tìm thấy phone input với bất kỳ selector nào")
+                logger.error(f"Current URL: {driver.current_url}")
+                logger.error(f"Page title: {driver.title}")
+                # Thử lấy token từ localStorage nếu có
+                try:
+                    token = driver.execute_script("return localStorage.getItem('vipo_access_token');")
+                    if token:
+                        logger.info("Tìm thấy token trong localStorage dù không tìm thấy form đăng nhập")
+                        return True, token
+                except:
+                    pass
+                return False, ""
+            
             phone_input.clear()
             phone_input.send_keys(self.phone)
             logger.info("Đã điền SĐT")
             
-            # Click nút "Tiếp tục"
-            continue_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, 'button.btn-login-default'))
-            )
-            continue_button.click()
-            logger.info("Đã click nút Tiếp tục")
-            time.sleep(2)
+            # Thử nhiều selector cho nút "Tiếp tục"
+            continue_button = None
+            continue_selectors = [
+                (By.CSS_SELECTOR, 'button.btn-login-default'),
+                (By.CSS_SELECTOR, 'button[type="submit"]'),
+                (By.XPATH, '//button[contains(text(), "Tiếp tục")]'),
+                (By.XPATH, '//button[contains(text(), "tiếp tục")]'),
+            ]
+            
+            for selector_type, selector_value in continue_selectors:
+                try:
+                    continue_button = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((selector_type, selector_value))
+                    )
+                    logger.info(f"Tìm thấy continue button với selector: {selector_type}={selector_value}")
+                    break
+                except Exception as e:
+                    logger.debug(f"Selector {selector_type}={selector_value} không tìm thấy: {e}")
+                    continue
+            
+            if continue_button:
+                continue_button.click()
+                logger.info("Đã click nút Tiếp tục")
+                time.sleep(3)  # Tăng thời gian chờ
+            else:
+                logger.warning("Không tìm thấy nút Tiếp tục, thử Enter")
+                phone_input.send_keys(Keys.RETURN)
+                time.sleep(3)
             
             # Tìm và điền mật khẩu
-            password_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "password"))
-            )
+            password_input = None
+            password_selectors = [
+                (By.ID, "password"),
+                (By.CSS_SELECTOR, 'input[id="password"]'),
+                (By.CSS_SELECTOR, 'input[type="password"]'),
+                (By.NAME, "password")
+            ]
+            
+            for selector_type, selector_value in password_selectors:
+                try:
+                    password_input = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((selector_type, selector_value))
+                    )
+                    logger.info(f"Tìm thấy password input với selector: {selector_type}={selector_value}")
+                    break
+                except Exception as e:
+                    logger.debug(f"Selector {selector_type}={selector_value} không tìm thấy: {e}")
+                    continue
+            
+            if not password_input:
+                logger.error("Không tìm thấy password input")
+                return False, ""
+            
             password_input.clear()
             password_input.send_keys(self.password)
             logger.info("Đã điền mật khẩu")
             
             # Click nút đăng nhập
-            login_button = driver.find_element(By.CSS_SELECTOR, 'button.btn-login-default')
-            login_button.click()
-            logger.info("Đã click nút đăng nhập")
+            login_button = None
+            login_selectors = [
+                (By.CSS_SELECTOR, 'button.btn-login-default'),
+                (By.CSS_SELECTOR, 'button[type="submit"]'),
+                (By.XPATH, '//button[contains(text(), "Đăng nhập")]'),
+                (By.XPATH, '//button[contains(text(), "đăng nhập")]'),
+            ]
+            
+            for selector_type, selector_value in login_selectors:
+                try:
+                    login_button = driver.find_element(selector_type, selector_value)
+                    if login_button.is_displayed() and login_button.is_enabled():
+                        logger.info(f"Tìm thấy login button với selector: {selector_type}={selector_value}")
+                        break
+                except Exception as e:
+                    logger.debug(f"Selector {selector_type}={selector_value} không tìm thấy: {e}")
+                    continue
+            
+            if login_button:
+                login_button.click()
+                logger.info("Đã click nút đăng nhập")
+            else:
+                logger.warning("Không tìm thấy nút đăng nhập, thử Enter")
+                password_input.send_keys(Keys.RETURN)
             
             # Chờ đăng nhập hoàn tất
-            time.sleep(4)
+            time.sleep(5)  # Tăng thời gian chờ
             
             # Kiểm tra xem đăng nhập có thành công không
             current_url = driver.current_url
+            logger.info(f"Current URL sau khi đăng nhập: {current_url}")
+            
             if "login" not in current_url:
                 logger.info("Đăng nhập thành công")
                 
@@ -398,6 +513,13 @@ class ExtractorVipo:
                     logger.info(f"Đã lấy được vipo_access_token: {vipo_access_token[:50]}...")
                 else:
                     logger.warning("Không tìm thấy vipo_access_token")
+                    # Thử lại sau 2 giây
+                    time.sleep(2)
+                    vipo_access_token = driver.execute_script("""
+                        return localStorage.getItem('vipo_access_token');
+                    """)
+                    if vipo_access_token:
+                        logger.info(f"Đã lấy được vipo_access_token sau retry: {vipo_access_token[:50]}...")
                 
                 # Lưu session và cookies
                 session_data = {
@@ -413,10 +535,28 @@ class ExtractorVipo:
                 return True, vipo_access_token or ""
             else:
                 logger.error("Đăng nhập thất bại - vẫn ở trang đăng nhập")
+                # Thử lấy token từ localStorage nếu có
+                try:
+                    token = driver.execute_script("return localStorage.getItem('vipo_access_token');")
+                    if token:
+                        logger.info("Tìm thấy token trong localStorage dù vẫn ở trang login")
+                        return True, token
+                except:
+                    pass
                 return False, ""
                 
         except Exception as e:
             logger.error(f"Lỗi khi đăng nhập: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Thử lấy token từ localStorage nếu có
+            try:
+                token = driver.execute_script("return localStorage.getItem('vipo_access_token');")
+                if token:
+                    logger.info("Tìm thấy token trong localStorage sau khi có lỗi")
+                    return True, token
+            except:
+                pass
             return False, ""
     
     def _search_product(self, driver, target_url: str) -> Optional[str]:
@@ -542,6 +682,15 @@ class ExtractorVipo:
                         "method": "requests",
                         "response_status": response.status_code
                     }
+            elif response.status_code == 401 or response.status_code == 403:
+                # Token expired hoặc invalid - cần login lại
+                logger.warning(f"API call thất bại do token expired/invalid: {response.status_code}")
+                return {
+                    "status": "token_expired",
+                    "message": f"Token expired or invalid: {response.status_code}",
+                    "method": "requests",
+                    "response_status": response.status_code
+                }
             else:
                 logger.warning(f"API call thất bại: {response.status_code}")
                 return {
@@ -641,11 +790,19 @@ class ExtractorVipo:
     def _call_vipo_api(self, driver, product_id: str, platform_type: str, merchant_id: str, access_token: str) -> Dict[str, Any]:
         """
         Gọi Vipo API với fallback strategy: requests (chính) → Selenium (fallback)
+        Nếu token expired, sẽ retry với login mới
         """
         # Phương án chính: requests
         result = self._call_vipo_api_requests(product_id, platform_type, merchant_id, access_token)
         
         if result.get('status') == 'success':
+            return result
+        
+        # Nếu token expired, clear session và retry với login mới
+        if result.get('status') == 'token_expired':
+            logger.warning("Token expired, clear session và thử login lại...")
+            self.clear_session()
+            # Retry với login mới (sẽ được handle ở extract() level)
             return result
         
         # Fallback: Selenium network monitoring
@@ -746,6 +903,12 @@ class ExtractorVipo:
             
             # BƯỚC 5: Gọi API với fallback strategy
             api_result = self._call_vipo_api(driver, product_id, platform_type, merchant_id, vipo_access_token)
+            
+            # Log kết quả API call
+            logger.info(f"API call result status: {api_result.get('status')}")
+            if api_result.get('status') != 'success':
+                logger.error(f"API call thất bại: {api_result.get('message', 'Unknown error')}")
+                logger.error(f"API result: {api_result}")
             
             # Tạo response thành công
             return {
