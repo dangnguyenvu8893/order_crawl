@@ -202,6 +202,199 @@ class ExtractorVipo:
                 logger.error(f"❌ Lỗi khi lưu session: {e}")
                 break
     
+    # ============================================================
+    # [COMMENTED] - Logic lấy bearer token (hiện tại không cần)
+    # Có thể uncomment sau nếu cần bearer token để gọi API
+    # ============================================================
+    # def _is_bearer_token_valid(self) -> bool:
+    #     """
+    #     Kiểm tra bearer token có còn hợp lệ không (24 giờ hoặc khi hết hạn)
+    #     
+    #     Returns:
+    #         True nếu token còn hợp lệ, False nếu không
+    #     """
+    #     session = self.load_session()
+    #     if not session:
+    #         return False
+    #     
+    #     # Kiểm tra bearer_token có tồn tại không
+    #     bearer_token = session.get('vipo_bearer_token')
+    #     if not bearer_token:
+    #         return False
+    #     
+    #     # Kiểm tra timestamp (24 giờ = 86400 giây)
+    #     token_timestamp = session.get('bearer_token_timestamp', 0)
+    #     if time.time() - token_timestamp > 86400:
+    #         logger.info("Bearer token đã hết hạn (quá 24 giờ)")
+    #         return False
+    #     
+    #     return True
+    
+    # def _get_bearer_token_from_network(self, driver) -> Optional[str]:
+    #     """
+    #     Lấy bearer token từ network requests khi truy cập vipomall.vn
+    #     
+    #     Args:
+    #         driver: Selenium WebDriver instance
+    #         
+    #     Returns:
+    #         Bearer token string hoặc None nếu không tìm thấy
+    #     """
+    #     try:
+    #         logger.info("🔍 Truy cập vipomall.vn để lấy bearer token từ network...")
+    #         
+    #         # Truy cập trang chủ vipomall.vn
+    #         driver.get("https://vipomall.vn/")
+    #         time.sleep(5)  # Tăng thời gian chờ để page load và các API calls được thực hiện
+    #         
+    #         # Thử scroll để trigger các API calls
+    #         try:
+    #             driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+    #             time.sleep(2)
+    #         except:
+    #             pass
+    #         
+    #         # Monitor network requests để tìm bearer token
+    #         bearer_token = None
+    #         max_attempts = 20  # Tăng số lần thử để đảm bảo bắt được request
+    #         
+    #         # Clear logs trước để chỉ lấy logs mới
+    #         driver.get_log('performance')
+    #         
+    #         for attempt in range(max_attempts):
+    #             time.sleep(1)
+    #             
+    #             # Lấy network logs
+    #             logs = driver.get_log('performance')
+    #             
+    #             for log in logs:
+    #                 try:
+    #                     message = json.loads(log['message'])
+    #                     
+    #                     # Tìm request có header Authorization (ưu tiên các API calls)
+    #                     if message['message']['method'] == 'Network.requestWillBeSent':
+    #                         request = message['message']['params']['request']
+    #                         url = request.get('url', '')
+    #                         headers = request.get('headers', {})
+    #                         
+    #                         # Chỉ lấy token từ các API calls (không phải static resources)
+    #                         if any(api_domain in url for api_domain in ['api-vipo.viettelpost.vn', 'vipomall.vn/api', '/api/']):
+    #                             authorization = headers.get('Authorization') or headers.get('authorization')
+    #                             
+    #                             # Kiểm tra token hợp lệ (không phải null, empty, hoặc quá ngắn)
+    #                             if authorization and authorization.startswith('Bearer '):
+    #                                 token_value = authorization.replace('Bearer ', '').strip()
+    #                                 
+    #                                 # Validate token: phải có độ dài hợp lệ (JWT thường > 100 chars)
+    #                                 if token_value and token_value.lower() != 'null' and len(token_value) > 50:
+    #                                     bearer_token = token_value
+    #                                     logger.info(f"✅ Tìm thấy bearer token từ API request (attempt {attempt + 1})")
+    #                                     logger.info(f"Request URL: {url[:100]}...")
+    #                                     logger.info(f"Bearer token: {bearer_token[:50]}...")
+    #                                     break
+    #                     
+    #                     # Hoặc tìm trong response headers (một số API trả về token)
+    #                     elif message['message']['method'] == 'Network.responseReceived':
+    #                         response = message['message']['params']['response']
+    #                         url = response.get('url', '')
+    #                         response_headers = response.get('headers', {})
+    #                         
+    #                         # Chỉ lấy từ API responses
+    #                         if any(api_domain in url for api_domain in ['api-vipo.viettelpost.vn', 'vipomall.vn/api', '/api/']):
+    #                             authorization = response_headers.get('Authorization') or response_headers.get('authorization')
+    #                             
+    #                             if authorization and authorization.startswith('Bearer '):
+    #                                 token_value = authorization.replace('Bearer ', '').strip()
+    #                                 
+    #                                 if token_value and token_value.lower() != 'null' and len(token_value) > 50:
+    #                                     bearer_token = token_value
+    #                                     logger.info(f"✅ Tìm thấy bearer token từ API response (attempt {attempt + 1})")
+    #                                     logger.info(f"Response URL: {url[:100]}...")
+    #                                     logger.info(f"Bearer token: {bearer_token[:50]}...")
+    #                                     break
+    #                 
+    #                 except Exception as e:
+    #                     logger.debug(f"Lỗi khi parse network log: {e}")
+    #                     continue
+    #             
+    #             if bearer_token:
+    #                 break
+    #         
+    #         # Nếu không tìm thấy trong network, thử lấy từ localStorage/sessionStorage
+    #         # ✅ SỬ DỤNG LOGIC CŨ: Lấy vipo_access_token từ localStorage (như code cũ)
+    #         if not bearer_token:
+    #             logger.info("⚠️ Không tìm thấy bearer token trong network requests, thử localStorage (logic cũ)...")
+    #             try:
+    #                 # ✅ Logic cũ: Lấy vipo_access_token từ localStorage (như method _login_to_vipo cũ)
+    #                 bearer_token = driver.execute_script("""
+    #                     // Ưu tiên: vipo_access_token (logic cũ)
+    #                     let token = localStorage.getItem('vipo_access_token');
+    #                     if (token && token.length > 50 && token.toLowerCase() !== 'null') {
+    #                         return token;
+    #                     }
+    #                     
+    #                     // Fallback: Thử các keys khác
+    #                     const keys = [
+    #                         'vipo_bearer_token',
+    #                         'bearer_token',
+    #                         'authorization',
+    #                         'auth_token',
+    #                         'access_token',
+    #                         'token'
+    #                     ];
+    #                     
+    #                     // Thử localStorage
+    #                     for (let key of keys) {
+    #                         let value = localStorage.getItem(key);
+    #                         if (value && value.length > 50 && value.toLowerCase() !== 'null') {
+    #                             return value;
+    #                         }
+    #                     }
+    #                     
+    #                     // Thử sessionStorage
+    #                     for (let key of keys) {
+    #                         let value = sessionStorage.getItem(key);
+    #                         if (value && value.length > 50 && value.toLowerCase() !== 'null') {
+    #                             return value;
+    #                         }
+    #                     }
+    #                     
+    #                     // Thử tìm trong tất cả localStorage keys (JWT pattern)
+    #                     for (let i = 0; i < localStorage.length; i++) {
+    #                         let key = localStorage.key(i);
+    #                         let value = localStorage.getItem(key);
+    #                         if (value && value.length > 100 && value.includes('.')) {
+    #                             // Có thể là JWT token (có dấu chấm)
+    #                             return value;
+    #                         }
+    #                     }
+    #                     
+    #                     return null;
+    #                 """)
+    #                 
+    #                 if bearer_token and bearer_token.lower() != 'null' and len(bearer_token) > 50:
+    #                     logger.info("✅ Tìm thấy bearer token từ localStorage (sử dụng logic cũ: vipo_access_token)")
+    #                     logger.info(f"Bearer token: {bearer_token[:50]}...")
+    #                 else:
+    #                     bearer_token = None
+    #                     
+    #             except Exception as e:
+    #                 logger.debug(f"Không lấy được token từ localStorage: {e}")
+    #         
+    #         if not bearer_token:
+    #             logger.warning("⚠️ Không tìm thấy bearer token hợp lệ trong network requests và storage")
+    #         
+    #         return bearer_token
+    #         
+    #     except Exception as e:
+    #         logger.error(f"❌ Lỗi khi lấy bearer token từ network: {e}")
+    #         import traceback
+    #         logger.error(traceback.format_exc())
+    #         return None
+    # ============================================================
+    # END OF COMMENTED BEARER TOKEN LOGIC
+    # ============================================================
+    
     def load_session(self) -> Optional[dict]:
         """Load thông tin session"""
         try:
@@ -561,83 +754,275 @@ class ExtractorVipo:
                 pass
             return False, ""
     
-    def _search_product(self, driver, target_url: str) -> Optional[str]:
-        """
-        Mô phỏng search trên vipomall.vn và chờ redirect
-        Sử dụng WebDriverWait để tối ưu thời gian chờ (thay vì time.sleep loop)
-        Returns: redirect URL hoặc None nếu thất bại
-        """
-        try:
-            logger.info("Truy cập trang chủ vipomall.vn...")
-            driver.get("https://vipomall.vn/")
-            time.sleep(2)
-            
-            # Tìm input search
-            search_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "search-navbar"))
-            )
-            
-            # Điền URL sản phẩm
-            search_input.clear()
-            search_input.send_keys(target_url)
-            logger.info(f"Đã điền URL: {target_url}")
-            
-            # Tìm và click nút search (div.input-group-prepend > img)
-            search_button = driver.find_element(By.CSS_SELECTOR, 'div.input-group-prepend > img')
-            search_button.click()
-            logger.info("Đã click nút search")
-            
-            # ✅ TỐI ƯU: Sử dụng WebDriverWait với custom expected condition
-            # Thay vì time.sleep(1) loop, dùng WebDriverWait với polling interval ~0.5s
-            # Sẽ tự dừng ngay khi detect redirect, không cần chờ hết timeout
-            try:
-                # Custom expected condition: chờ URL chứa "/san-pham/"
-                wait = WebDriverWait(driver, timeout=15, poll_frequency=0.5)
-                wait.until(lambda d: "/san-pham/" in d.current_url)
-                
-                # Lấy URL sau khi redirect
-                current_url = driver.current_url
-                logger.info(f"✅ Đã redirect đến: {current_url} (sử dụng WebDriverWait)")
-                return current_url
-                
-            except TimeoutException:
-                logger.warning("Không redirect sau 15 giây (WebDriverWait timeout)")
-                return None
-            
-        except Exception as e:
-            logger.error(f"Lỗi khi search product: {e}")
-            return None
+    # ============================================================
+    # [COMMENTED] - Các method cũ không dùng tới trong luồng mới
+    # Luồng mới sử dụng API search/link trực tiếp, không cần search và redirect
+    # ============================================================
+    # def _search_product(self, driver, target_url: str) -> Optional[str]:
+    #     """
+    #     Mô phỏng search trên vipomall.vn và chờ redirect
+    #     Sử dụng WebDriverWait để tối ưu thời gian chờ (thay vì time.sleep loop)
+    #     Returns: redirect URL hoặc None nếu thất bại
+    #     
+    #     ⚠️ DEPRECATED: Không dùng trong luồng mới
+    #     """
+    #     try:
+    #         logger.info("Truy cập trang chủ vipomall.vn...")
+    #         driver.get("https://vipomall.vn/")
+    #         time.sleep(2)
+    #         
+    #         # Tìm input search
+    #         search_input = WebDriverWait(driver, 10).until(
+    #             EC.presence_of_element_located((By.ID, "search-navbar"))
+    #         )
+    #         
+    #         # Điền URL sản phẩm
+    #         search_input.clear()
+    #         search_input.send_keys(target_url)
+    #         logger.info(f"Đã điền URL: {target_url}")
+    #         
+    #         # Tìm và click nút search (div.input-group-prepend > img)
+    #         search_button = driver.find_element(By.CSS_SELECTOR, 'div.input-group-prepend > img')
+    #         search_button.click()
+    #         logger.info("Đã click nút search")
+    #         
+    #         # ✅ TỐI ƯU: Sử dụng WebDriverWait với custom expected condition
+    #         # Thay vì time.sleep(1) loop, dùng WebDriverWait với polling interval ~0.5s
+    #         # Sẽ tự dừng ngay khi detect redirect, không cần chờ hết timeout
+    #         try:
+    #             # Custom expected condition: chờ URL chứa "/san-pham/"
+    #             wait = WebDriverWait(driver, timeout=15, poll_frequency=0.5)
+    #             wait.until(lambda d: "/san-pham/" in d.current_url)
+    #             
+    #             # Lấy URL sau khi redirect
+    #             current_url = driver.current_url
+    #             logger.info(f"✅ Đã redirect đến: {current_url} (sử dụng WebDriverWait)")
+    #             return current_url
+    #             
+    #         except TimeoutException:
+    #             logger.warning("Không redirect sau 15 giây (WebDriverWait timeout)")
+    #             return None
+    #         
+    #     except Exception as e:
+    #         logger.error(f"Lỗi khi search product: {e}")
+    #         return None
     
-    def _extract_url_params(self, redirect_url: str) -> Dict[str, str]:
-        """
-        Extract product_id, platform_type, merchant_id từ redirect URL
-        Example: https://vipomall.vn/san-pham/987315762638?platform_type=21&merchant_id=100
-        """
-        try:
-            parsed = urlparse(redirect_url)
-            product_id = parsed.path.split('/')[-1]  # Lấy phần cuối của path
-            
-            # Parse query params
-            query_params = parse_qs(parsed.query)
-            platform_type = query_params.get('platform_type', [None])[0]
-            merchant_id = query_params.get('merchant_id', [None])[0]
-            
-            return {
-                'product_id': product_id,
-                'platform_type': platform_type or '21',
-                'merchant_id': merchant_id or '100'
-            }
-        except Exception as e:
-            logger.error(f"Lỗi khi extract URL params: {e}")
-            return {
-                'product_id': '',
-                'platform_type': '21',
-                'merchant_id': '100'
-            }
+    # def _extract_url_params(self, redirect_url: str) -> Dict[str, str]:
+    #     """
+    #     Extract product_id, platform_type, merchant_id từ redirect URL
+    #     Example: https://vipomall.vn/san-pham/987315762638?platform_type=21&merchant_id=100
+    #     
+    #     ⚠️ DEPRECATED: Không dùng trong luồng mới
+    #     """
+    #     try:
+    #         parsed = urlparse(redirect_url)
+    #         product_id = parsed.path.split('/')[-1]  # Lấy phần cuối của path
+    #         
+    #         # Parse query params
+    #         query_params = parse_qs(parsed.query)
+    #         platform_type = query_params.get('platform_type', [None])[0]
+    #         merchant_id = query_params.get('merchant_id', [None])[0]
+    #         
+    #         return {
+    #             'product_id': product_id,
+    #             'platform_type': platform_type or '21',
+    #             'merchant_id': merchant_id or '100'
+    #         }
+    #     except Exception as e:
+    #         logger.error(f"Lỗi khi extract URL params: {e}")
+    #         return {
+    #             'product_id': '',
+    #             'platform_type': '21',
+    #             'merchant_id': '100'
+    #         }
+    # ============================================================
+    # END OF COMMENTED METHODS
+    # ============================================================
     
-    def _call_vipo_api_requests(self, product_id: str, platform_type: str, merchant_id: str, access_token: str) -> Dict[str, Any]:
+    # ============================================================
+    # [COMMENTED] - Các method cũ không dùng tới trong luồng mới
+    # Luồng mới sử dụng API search/link trực tiếp với bearer token
+    # ============================================================
+    # def _call_vipo_api_requests(self, product_id: str, platform_type: str, merchant_id: str, access_token: str) -> Dict[str, Any]:
+    #     """
+    #     Gọi Vipo API bằng requests library (phương án chính)
+    #     
+    #     ⚠️ DEPRECATED: Không dùng trong luồng mới
+    #     """
+    #     if not REQUESTS_AVAILABLE:
+    #         return {
+    #             "status": "error",
+    #             "message": "Requests library không khả dụng"
+    #         }
+    #     
+    #     try:
+    #         headers = {
+    #             'accept': 'application/json, text/plain, */*',
+    #             'accept-language': 'vi',
+    #             'api-version': '1.0.3',
+    #             'content-type': 'application/json',
+    #             'origin': 'https://vipomall.vn',
+    #             'referer': 'https://vipomall.vn/',
+    #             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0'
+    #         }
+    #         
+    #         # Chỉ thêm authorization header nếu có token (hiện tại không cần token)
+    #         if access_token:
+    #             headers['authorization'] = f'Bearer {access_token}'
+    #         
+    #         payload = {
+    #             "product_id": product_id,
+    #             "platform_type": platform_type,
+    #             "product_link": None,
+    #             "merchant_id": merchant_id
+    #         }
+    #         
+    #         logger.info(f"Gọi API Vipo với requests: product_id={product_id}, platform_type={platform_type}, merchant_id={merchant_id}")
+    #         response = requests.post(
+    #             self.api_base_url,
+    #             headers=headers,
+    #             json=payload,
+    #             timeout=30
+    #         )
+    #         
+    #         if response.status_code == 200:
+    #             data = response.json()
+    #             if data.get('status') == '01':
+    #                 logger.info("✓ API call thành công với requests")
+    #                 return {
+    #                     "status": "success",
+    #                     "data": data.get('data', {}),
+    #                     "method": "requests",
+    #                     "response_status": 200
+    #                 }
+    #             else:
+    #                 logger.warning(f"API trả về status không hợp lệ: {data.get('status')}")
+    #                 return {
+    #                     "status": "error",
+    #                     "message": f"API status không hợp lệ: {data.get('status')}",
+    #                     "method": "requests",
+    #                     "response_status": response.status_code
+    #                 }
+    #         elif response.status_code == 401 or response.status_code == 403:
+    #             # Token expired hoặc invalid - cần login lại
+    #             logger.warning(f"API call thất bại do token expired/invalid: {response.status_code}")
+    #             return {
+    #                 "status": "token_expired",
+    #                 "message": f"Token expired or invalid: {response.status_code}",
+    #                 "method": "requests",
+    #                 "response_status": response.status_code
+    #             }
+    #         else:
+    #             logger.warning(f"API call thất bại: {response.status_code}")
+    #             return {
+    #                 "status": "error",
+    #                 "message": f"API call failed: {response.status_code}",
+    #                 "method": "requests",
+    #                 "response_status": response.status_code
+    #             }
+    #             
+    #     except Exception as e:
+    #         logger.error(f"Lỗi khi gọi API với requests: {e}")
+    #         return {
+    #             "status": "error",
+    #             "message": str(e),
+    #             "method": "requests"
+    #         }
+    
+    # def _call_vipo_api_selenium(self, driver, product_id: str, platform_type: str, merchant_id: str, access_token: str) -> Dict[str, Any]:
+    #     """
+    #     Gọi Vipo API bằng Selenium network monitoring (fallback)
+    #     
+    #     ⚠️ DEPRECATED: Không dùng trong luồng mới
+    #     """
+    #     try:
+    #         logger.info("Thử gọi API với Selenium network monitoring (fallback)...")
+    #         
+    #         # Navigate đến trang product để trigger API call
+    #         product_url = f"https://vipomall.vn/san-pham/{product_id}?platform_type={platform_type}&merchant_id={merchant_id}"
+    #         driver.get(product_url)
+    #         time.sleep(3)
+    #         
+    #         # Monitor network requests
+    #         api_responses = []
+    #         for attempt in range(10):
+    #             time.sleep(1)
+    #             
+    #             # Lấy kết quả từ network requests
+    #             logs = driver.get_log('performance')
+    #             
+    #             for log in logs:
+    #                 try:
+    #                     message = json.loads(log['message'])
+    #                     
+    #                     # Lấy response data
+    #                     if message['message']['method'] == 'Network.responseReceived':
+    #                         response = message['message']['params']['response']
+    #                         url = response['url']
+    #                         
+    #                         if '/listing/product/detail' in url:
+    #                             request_id = message['message']['params']['requestId']
+    #                             logger.info(f"Tìm thấy API response: {url}")
+    #                             
+    #                             # Lấy response body
+    #                             try:
+    #                                 response_body = driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
+    #                                 if response_body and 'body' in response_body:
+    #                                     response_data = json.loads(response_body['body'])
+    #                                     if response_data.get('status') == '01':
+    #                                         logger.info(f"✓ Tìm thấy API response hợp lệ ở lần thử {attempt + 1}")
+    #                                         return {
+    #                                             "status": "success",
+    #                                             "data": response_data.get('data', {}),
+    #                                             "method": "selenium_network_monitoring",
+    #                                             "response_status": 200
+    #                                         }
+    #                                     else:
+    #                                         api_responses.append(response_data)
+    #                             except Exception as e:
+    #                                 logger.warning(f"Không lấy được response body: {e}")
+    #                 except Exception:
+    #                     continue
+    #         
+    #         # Nếu sau 10 lần thử vẫn không có response hợp lệ
+    #         if api_responses:
+    #             logger.warning(f"Sau 10 lần thử, chỉ tìm thấy {len(api_responses)} responses không hợp lệ")
+    #             return {
+    #                 "status": "error",
+    #                 "message": "API response không hợp lệ",
+    #                 "method": "selenium_network_monitoring",
+    #                 "response_status": 200
+    #             }
+    #         else:
+    #             logger.error("Sau 10 lần thử, không tìm thấy API response")
+    #             return {
+    #                 "status": "error",
+    #                 "message": "Không tìm thấy API response sau 10 lần thử",
+    #                 "method": "selenium_network_monitoring",
+    #                 "response_status": 404
+    #             }
+    #             
+    #     except Exception as e:
+    #         logger.error(f"Lỗi khi gọi API với Selenium: {e}")
+    #         return {
+    #             "status": "error",
+    #             "message": str(e),
+    #             "method": "selenium_network_monitoring"
+    #         }
+    # ============================================================
+    # END OF COMMENTED METHODS
+    # ============================================================
+    
+    def _call_vipo_search_link_api(self, product_link: str, bearer_token: Optional[str] = None) -> Dict[str, Any]:
         """
-        Gọi Vipo API bằng requests library (phương án chính)
+        Gọi Vipo API search/link với bearer token (LUỒNG MỚI)
+        
+        Args:
+            product_link: URL sản phẩm cần crawl
+            bearer_token: Bearer token để authenticate (optional - hiện tại không cần)
+            
+        Returns:
+            Dict chứa kết quả API call
         """
         if not REQUESTS_AVAILABLE:
             return {
@@ -646,6 +1031,8 @@ class ExtractorVipo:
             }
         
         try:
+            api_url = "https://api-vipo.viettelpost.vn/listing/product/search/link"
+            
             headers = {
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'vi',
@@ -656,20 +1043,22 @@ class ExtractorVipo:
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0'
             }
             
-            # Chỉ thêm authorization header nếu có token (hiện tại không cần token)
-            if access_token:
-                headers['authorization'] = f'Bearer {access_token}'
+            # Chỉ thêm authorization header nếu có bearer_token
+            if bearer_token:
+                headers['authorization'] = f'Bearer {bearer_token}'
             
             payload = {
-                "product_id": product_id,
-                "platform_type": platform_type,
-                "product_link": None,
-                "merchant_id": merchant_id
+                "product_link": product_link
             }
             
-            logger.info(f"Gọi API Vipo với requests: product_id={product_id}, platform_type={platform_type}, merchant_id={merchant_id}")
+            logger.info(f"🔍 Gọi API search/link với product_link: {product_link[:100]}...")
+            if bearer_token:
+                logger.info(f"Bearer token: {bearer_token[:50]}...")
+            else:
+                logger.info("Không sử dụng bearer token (không cần)")
+            
             response = requests.post(
-                self.api_base_url,
+                api_url,
                 headers=headers,
                 json=payload,
                 timeout=30
@@ -677,131 +1066,52 @@ class ExtractorVipo:
             
             if response.status_code == 200:
                 data = response.json()
-                if data.get('status') == '01':
-                    logger.info("✓ API call thành công với requests")
-                    return {
-                        "status": "success",
-                        "data": data.get('data', {}),
-                        "method": "requests",
-                        "response_status": 200
-                    }
-                else:
-                    logger.warning(f"API trả về status không hợp lệ: {data.get('status')}")
-                    return {
-                        "status": "error",
-                        "message": f"API status không hợp lệ: {data.get('status')}",
-                        "method": "requests",
-                        "response_status": response.status_code
-                    }
+                logger.info(f"✅ API search/link thành công")
+                logger.info(f"Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}")
+                
+                return {
+                    "status": "success",
+                    "data": data,
+                    "method": "search_link_api",
+                    "response_status": 200
+                }
             elif response.status_code == 401 or response.status_code == 403:
-                # Token expired hoặc invalid - cần login lại
-                logger.warning(f"API call thất bại do token expired/invalid: {response.status_code}")
+                # Token expired hoặc invalid - cần lấy token mới
+                logger.warning(f"❌ API call thất bại do token expired/invalid: {response.status_code}")
                 return {
                     "status": "token_expired",
                     "message": f"Token expired or invalid: {response.status_code}",
-                    "method": "requests",
+                    "method": "search_link_api",
                     "response_status": response.status_code
                 }
             else:
-                logger.warning(f"API call thất bại: {response.status_code}")
+                logger.warning(f"❌ API call thất bại: {response.status_code}")
+                logger.warning(f"Response: {response.text[:500]}")
                 return {
                     "status": "error",
                     "message": f"API call failed: {response.status_code}",
-                    "method": "requests",
-                    "response_status": response.status_code
+                    "method": "search_link_api",
+                    "response_status": response.status_code,
+                    "response_text": response.text[:500]
                 }
                 
         except Exception as e:
-            logger.error(f"Lỗi khi gọi API với requests: {e}")
+            logger.error(f"❌ Lỗi khi gọi API search/link: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {
                 "status": "error",
                 "message": str(e),
-                "method": "requests"
-            }
-    
-    def _call_vipo_api_selenium(self, driver, product_id: str, platform_type: str, merchant_id: str, access_token: str) -> Dict[str, Any]:
-        """
-        Gọi Vipo API bằng Selenium network monitoring (fallback)
-        """
-        try:
-            logger.info("Thử gọi API với Selenium network monitoring (fallback)...")
-            
-            # Navigate đến trang product để trigger API call
-            product_url = f"https://vipomall.vn/san-pham/{product_id}?platform_type={platform_type}&merchant_id={merchant_id}"
-            driver.get(product_url)
-            time.sleep(3)
-            
-            # Monitor network requests
-            api_responses = []
-            for attempt in range(10):
-                time.sleep(1)
-                
-                # Lấy kết quả từ network requests
-                logs = driver.get_log('performance')
-                
-                for log in logs:
-                    try:
-                        message = json.loads(log['message'])
-                        
-                        # Lấy response data
-                        if message['message']['method'] == 'Network.responseReceived':
-                            response = message['message']['params']['response']
-                            url = response['url']
-                            
-                            if '/listing/product/detail' in url:
-                                request_id = message['message']['params']['requestId']
-                                logger.info(f"Tìm thấy API response: {url}")
-                                
-                                # Lấy response body
-                                try:
-                                    response_body = driver.execute_cdp_cmd('Network.getResponseBody', {'requestId': request_id})
-                                    if response_body and 'body' in response_body:
-                                        response_data = json.loads(response_body['body'])
-                                        if response_data.get('status') == '01':
-                                            logger.info(f"✓ Tìm thấy API response hợp lệ ở lần thử {attempt + 1}")
-                                            return {
-                                                "status": "success",
-                                                "data": response_data.get('data', {}),
-                                                "method": "selenium_network_monitoring",
-                                                "response_status": 200
-                                            }
-                                        else:
-                                            api_responses.append(response_data)
-                                except Exception as e:
-                                    logger.warning(f"Không lấy được response body: {e}")
-                    except Exception:
-                        continue
-            
-            # Nếu sau 10 lần thử vẫn không có response hợp lệ
-            if api_responses:
-                logger.warning(f"Sau 10 lần thử, chỉ tìm thấy {len(api_responses)} responses không hợp lệ")
-                return {
-                    "status": "error",
-                    "message": "API response không hợp lệ",
-                    "method": "selenium_network_monitoring",
-                    "response_status": 200
-                }
-            else:
-                logger.error("Sau 10 lần thử, không tìm thấy API response")
-                return {
-                    "status": "error",
-                    "message": "Không tìm thấy API response sau 10 lần thử",
-                    "method": "selenium_network_monitoring",
-                    "response_status": 404
-                }
-                
-        except Exception as e:
-            logger.error(f"Lỗi khi gọi API với Selenium: {e}")
-            return {
-                "status": "error",
-                "message": str(e),
-                "method": "selenium_network_monitoring"
+                "method": "search_link_api"
             }
     
     def _call_vipo_api(self, driver, product_id: str, platform_type: str, merchant_id: str, access_token: str) -> Dict[str, Any]:
         """
         Gọi Vipo API với fallback strategy: requests (chính) → Selenium (fallback)
         Nếu token expired, sẽ retry với login mới
+        
+        ⚠️ DEPRECATED: Method này được giữ lại để backward compatibility
+        Nên sử dụng _call_vipo_search_link_api() với luồng mới
         """
         # Phương án chính: requests
         result = self._call_vipo_api_requests(product_id, platform_type, merchant_id, access_token)
@@ -822,7 +1132,13 @@ class ExtractorVipo:
     
     def extract(self, url: str) -> Dict[str, Any]:
         """
-        Extract thông tin từ URL vipomall.vn
+        Extract thông tin từ URL vipomall.vn (LUỒNG MỚI)
+        
+        Luồng mới:
+        1. Resolve URL nếu cần thiết
+        2. Lấy bearer token (chỉ khi cần - check 24h hoặc khi hết hạn)
+        3. Gọi API search/link với bearer token
+        4. Extract kết quả từ response
         
         Args:
             url: URL cần extract (có thể là short URL hoặc direct URL)
@@ -835,6 +1151,7 @@ class ExtractorVipo:
         
         try:
             # BƯỚC 1: Resolve URL nếu cần thiết
+            logger.info(f"🔍 Starting Vipo extraction for URL: {url}")
             resolve_result = resolve_product_url(url)
             
             if not resolve_result['success']:
@@ -848,6 +1165,7 @@ class ExtractorVipo:
             
             # Sử dụng final URL để extract
             final_url = resolve_result['final_url']
+            logger.info(f"✅ URL resolved: {original_url} → {final_url} ({resolve_result.get('redirect_count', 0)} redirects)")
             
             if not self.can_handle(final_url):
                 return self._create_error_response(
@@ -857,105 +1175,120 @@ class ExtractorVipo:
                     resolve_result=resolve_result
                 )
         
-            # BƯỚC 2: Setup browser (vẫn cần browser cho search product, nhưng không cần đăng nhập)
-            driver = self._setup_browser()
-            
+            # BƯỚC 2: Gọi API search/link (LUỒNG MỚI - không cần bearer token hiện tại)
             # ============================================================
-            # TODO: [TẠM THỜI COMMENT] - Vipo hiện tại không yêu cầu đăng nhập
-            # Nếu sau này Vipo yêu cầu đăng nhập lại, bỏ comment phần code dưới đây:
+            # [COMMENTED] - Logic lấy bearer token (hiện tại không cần)
             # ============================================================
-            # login_start = time.time()
-            # login_success, vipo_access_token = self._login_to_vipo(driver)
-            # login_duration = (time.time() - login_start) * 1000
-            # logger.info(f"⏱️ [EXTRACTOR VIPO] Login hoàn thành trong {login_duration:.2f}ms (Success: {login_success})")
+            # bearer_token = None
             # 
-            # # Nếu không có token, thử lấy từ localStorage
-            # if not vipo_access_token:
-            #     logger.warning("⏱️ [EXTRACTOR VIPO] Không có token từ login, thử lấy từ localStorage...")
-            #     localstorage_start = time.time()
-            #     try:
-            #         vipo_access_token = driver.execute_script("""
-            #             return localStorage.getItem('vipo_access_token');
-            #         """)
-            #         localstorage_duration = (time.time() - localstorage_start) * 1000
-            #         if vipo_access_token:
-            #             logger.info(f"⏱️ [EXTRACTOR VIPO] Đã lấy được token từ localStorage trong {localstorage_duration:.2f}ms")
-            #         else:
-            #             logger.warning(f"⏱️ [EXTRACTOR VIPO] Không lấy được token từ localStorage sau {localstorage_duration:.2f}ms")
-            #     except Exception as e:
-            #         localstorage_duration = (time.time() - localstorage_start) * 1000
-            #         logger.warning(f"⏱️ [EXTRACTOR VIPO] Không thể lấy token từ localStorage sau {localstorage_duration:.2f}ms: {e}")
-            # 
-            # if not vipo_access_token:
-            #     total_duration = (time.time() - extract_start_time) * 1000
-            #     logger.error(f"⏱️ [EXTRACTOR VIPO] Không có vipo_access_token sau {total_duration:.2f}ms")
-            #     return self._create_error_response(
-            #         message="Không có vipo_access_token để gọi API",
-            #         original_url=original_url,
-            #         final_url=final_url,
-            #         resolve_result=resolve_result
-            #     )
+            # # Kiểm tra bearer token có còn hợp lệ không
+            # if self._is_bearer_token_valid():
+            #     session = self.load_session()
+            #     bearer_token = session.get('vipo_bearer_token')
+            #     logger.info("✅ Sử dụng bearer token đã lưu (còn hạn)")
+            # else:
+            #     # Cần lấy bearer token mới
+            #     logger.info("🔄 Bearer token không hợp lệ hoặc chưa có, lấy token mới...")
+            #     driver = self._setup_browser()
+            #     
+            #     bearer_token = self._get_bearer_token_from_network(driver)
+            #     
+            #     if bearer_token:
+            #         # Lưu bearer token vào session
+            #         session = self.load_session() or {}
+            #         session['vipo_bearer_token'] = bearer_token
+            #         session['bearer_token_timestamp'] = time.time()
+            #         self.save_session(session)
+            #         logger.info("✅ Đã lưu bearer token mới vào session")
+            #     else:
+            #         logger.error("❌ Không thể lấy bearer token từ network")
+            #         if driver:
+            #             driver.quit()
+            #         return self._create_error_response(
+            #             message="Không thể lấy bearer token từ network",
+            #             original_url=original_url,
+            #             final_url=final_url,
+            #             resolve_result=resolve_result
+            #         )
             # ============================================================
-            # END OF COMMENTED LOGIN CODE
+            # END OF COMMENTED BEARER TOKEN LOGIC
             # ============================================================
             
-            # Hiện tại: Không cần đăng nhập, set token = None hoặc empty string
-            # API sẽ hoạt động mà không cần token (hoặc sẽ báo lỗi nếu cần)
-            login_success = False
-            vipo_access_token = None  # Không cần token hiện tại
+            # Gọi API search/link không cần bearer token (hoặc có thể pass None/empty)
+            logger.info(f"🔍 Gọi API search/link với URL: {final_url}")
+            bearer_token = None  # Không cần bearer token hiện tại
+            api_result = self._call_vipo_search_link_api(final_url, bearer_token)
             
-            # BƯỚC 3: Search product và chờ redirect
-            redirect_url = self._search_product(driver, final_url)
-            
-            if not redirect_url:
-                logger.error("Không thể search product hoặc không redirect")
-                return self._create_error_response(
-                    message="Không thể search product hoặc không redirect",
-                    original_url=original_url,
-                    final_url=final_url,
-                    resolve_result=resolve_result
-                )
-            
-            # BƯỚC 4: Extract URL params từ redirect
-            url_params = self._extract_url_params(redirect_url)
-            product_id = url_params['product_id']
-            platform_type = url_params['platform_type']
-            merchant_id = url_params['merchant_id']
-            
-            if not product_id:
-                logger.error("Không thể extract product_id từ redirect URL")
-                return self._create_error_response(
-                    message="Không thể extract product_id từ redirect URL",
-                    original_url=original_url,
-                    final_url=final_url,
-                    redirect_url=redirect_url,
-                    resolve_result=resolve_result
-                )
-            
-            # BƯỚC 5: Gọi API với fallback strategy
-            api_result = self._call_vipo_api(driver, product_id, platform_type, merchant_id, vipo_access_token)
+            # ============================================================
+            # [COMMENTED] - Logic retry khi token expired (hiện tại không cần)
+            # ============================================================
+            # # Nếu token expired, thử lấy token mới và retry
+            # if api_result.get('status') == 'token_expired':
+            #     logger.warning("🔄 Token expired, lấy token mới và retry...")
+            #     
+            #     if not driver:
+            #         driver = self._setup_browser()
+            #     
+            #     bearer_token = self._get_bearer_token_from_network(driver)
+            #     
+            #     if bearer_token:
+            #         # Lưu bearer token mới
+            #         session = self.load_session() or {}
+            #         session['vipo_bearer_token'] = bearer_token
+            #         session['bearer_token_timestamp'] = time.time()
+            #         self.save_session(session)
+            #         
+            #         # Retry API call
+            #         api_result = self._call_vipo_search_link_api(final_url, bearer_token)
+            #     else:
+            #         logger.error("❌ Không thể lấy bearer token mới sau khi expired")
+            #         if driver:
+            #             driver.quit()
+            #         return self._create_error_response(
+            #             message="Token expired và không thể lấy token mới",
+            #             original_url=original_url,
+            #             final_url=final_url,
+            #             resolve_result=resolve_result
+            #         )
+            # ============================================================
+            # END OF COMMENTED RETRY LOGIC
+            # ============================================================
             
             if api_result.get('status') != 'success':
-                logger.error(f"API call thất bại: {api_result.get('message', 'Unknown error')}")
+                logger.error(f"❌ API call thất bại: {api_result.get('message', 'Unknown error')}")
+                if driver:
+                    driver.quit()
+                return self._create_error_response(
+                    message=f"API call thất bại: {api_result.get('message', 'Unknown error')}",
+                    original_url=original_url,
+                    final_url=final_url,
+                    resolve_result=resolve_result
+                )
+            
+            # BƯỚC 4: Extract kết quả từ response
+            # API search/link trả về data trực tiếp, không cần extract product_id như luồng cũ
+            response_data = api_result.get('data', {})
+            
+            # Extract sourceId từ response hoặc từ URL
+            source_id = self._extract_source_id_from_response(response_data) or self._extract_source_id(final_url)
             
             # Tạo response thành công
             return {
-                "status": "success" if api_result["status"] == "success" else "error",
+                "status": "success",
                 "url": final_url,
                 "original_url": original_url,
                 "timestamp": time.time(),
                 "sourceType": "vipo",
-                "sourceId": product_id,
-                "login_success": login_success,
-                "vipo_access_token": vipo_access_token[:50] + "..." if vipo_access_token else "",
-                "redirect_url": redirect_url,
-                "url_params": url_params,
+                "sourceId": source_id,
+                # "bearer_token_used": bearer_token[:50] + "..." if bearer_token else "",  # Commented: không cần bearer token
                 "resolve_result": resolve_result,
-                "raw_data": api_result
+                "raw_data": api_result  # Chứa toàn bộ response từ API search/link
             }
             
         except Exception as e:
-            logger.error(f"Lỗi khi extract vipo: {e}")
+            logger.error(f"❌ Lỗi khi extract vipo: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return self._create_error_response(
                 message=str(e),
                 original_url=original_url,
@@ -965,6 +1298,50 @@ class ExtractorVipo:
         finally:
             if driver:
                 driver.quit()
+    
+    def _extract_source_id_from_response(self, response_data: Dict[str, Any]) -> str:
+        """
+        Extract source ID từ API response (luồng mới)
+        
+        Args:
+            response_data: Data từ API search/link response
+            
+        Returns:
+            Source ID string hoặc empty string nếu không tìm thấy
+        """
+        try:
+            # Thử các paths khác nhau để lấy product_id/sourceId
+            id_paths = [
+                'product_id',
+                'data.product_id',
+                'product.product_id',
+                'sourceId',
+                'data.sourceId',
+                'product.sourceId',
+                'id',
+                'data.id',
+                'product.id'
+            ]
+            
+            for path in id_paths:
+                if '.' in path:
+                    keys = path.split('.')
+                    current = response_data
+                    try:
+                        for key in keys:
+                            current = current[key]
+                        if current and str(current).strip():
+                            return str(current).strip()
+                    except (KeyError, TypeError):
+                        continue
+                else:
+                    if path in response_data and response_data[path]:
+                        return str(response_data[path]).strip()
+            
+            return ""
+        except Exception as e:
+            logger.debug(f"Lỗi khi extract source ID từ response: {e}")
+            return ""
     
     def _extract_source_id(self, url: str) -> str:
         """
