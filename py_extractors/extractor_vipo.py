@@ -22,6 +22,7 @@ try:
     from selenium.webdriver.common.keys import Keys  # type: ignore
     from selenium.webdriver.support.ui import WebDriverWait  # type: ignore
     from selenium.webdriver.support import expected_conditions as EC  # type: ignore
+    from selenium.common.exceptions import TimeoutException  # type: ignore
     from selenium.webdriver.chrome.options import Options  # type: ignore
     from selenium.webdriver.chrome.service import Service  # type: ignore
     SELENIUM_AVAILABLE = True
@@ -32,6 +33,7 @@ except ImportError as e:
     Keys = None
     WebDriverWait = None
     EC = None
+    TimeoutException = None
     Options = None
     Service = None
     SELENIUM_AVAILABLE = False
@@ -562,6 +564,7 @@ class ExtractorVipo:
     def _search_product(self, driver, target_url: str) -> Optional[str]:
         """
         Mô phỏng search trên vipomall.vn và chờ redirect
+        Sử dụng WebDriverWait để tối ưu thời gian chờ (thay vì time.sleep loop)
         Returns: redirect URL hoặc None nếu thất bại
         """
         try:
@@ -584,17 +587,22 @@ class ExtractorVipo:
             search_button.click()
             logger.info("Đã click nút search")
             
-            # Chờ redirect (tối đa 15 giây)
-            max_wait = 15
-            for i in range(max_wait):
-                time.sleep(1)
+            # ✅ TỐI ƯU: Sử dụng WebDriverWait với custom expected condition
+            # Thay vì time.sleep(1) loop, dùng WebDriverWait với polling interval ~0.5s
+            # Sẽ tự dừng ngay khi detect redirect, không cần chờ hết timeout
+            try:
+                # Custom expected condition: chờ URL chứa "/san-pham/"
+                wait = WebDriverWait(driver, timeout=15, poll_frequency=0.5)
+                wait.until(lambda d: "/san-pham/" in d.current_url)
+                
+                # Lấy URL sau khi redirect
                 current_url = driver.current_url
-                if "/san-pham/" in current_url:
-                    logger.info(f"Đã redirect đến: {current_url}")
-                    return current_url
-            
-            logger.warning("Không redirect sau 15 giây")
-            return None
+                logger.info(f"✅ Đã redirect đến: {current_url} (sử dụng WebDriverWait)")
+                return current_url
+                
+            except TimeoutException:
+                logger.warning("Không redirect sau 15 giây (WebDriverWait timeout)")
+                return None
             
         except Exception as e:
             logger.error(f"Lỗi khi search product: {e}")
@@ -642,12 +650,15 @@ class ExtractorVipo:
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'vi',
                 'api-version': '1.0.3',
-                'authorization': f'Bearer {access_token}',
                 'content-type': 'application/json',
                 'origin': 'https://vipomall.vn',
                 'referer': 'https://vipomall.vn/',
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0'
             }
+            
+            # Chỉ thêm authorization header nếu có token (hiện tại không cần token)
+            if access_token:
+                headers['authorization'] = f'Bearer {access_token}'
             
             payload = {
                 "product_id": product_id,
@@ -824,12 +835,11 @@ class ExtractorVipo:
         
         try:
             # BƯỚC 1: Resolve URL nếu cần thiết
-            logger.info(f"Starting extraction for URL: {url}")
             resolve_result = resolve_product_url(url)
             
             if not resolve_result['success']:
                 error_msg = f"Cannot resolve URL: {resolve_result.get('error', 'Unknown error')}"
-                logger.error(f"URL resolution failed for {url}: {error_msg}")
+                logger.error(f"URL resolution failed: {error_msg}")
                 return self._create_error_response(
                     message=error_msg,
                     original_url=original_url,
@@ -838,8 +848,6 @@ class ExtractorVipo:
             
             # Sử dụng final URL để extract
             final_url = resolve_result['final_url']
-            redirect_count = resolve_result.get('redirect_count', 0)
-            logger.info(f"URL resolved: {original_url} → {final_url} ({redirect_count} redirects)")
             
             if not self.can_handle(final_url):
                 return self._create_error_response(
@@ -849,34 +857,58 @@ class ExtractorVipo:
                     resolve_result=resolve_result
                 )
         
-            # BƯỚC 2: Setup browser và đăng nhập (optional)
+            # BƯỚC 2: Setup browser (vẫn cần browser cho search product, nhưng không cần đăng nhập)
             driver = self._setup_browser()
-            login_success, vipo_access_token = self._login_to_vipo(driver)
             
-            # Nếu không có token, thử lấy từ localStorage
-            if not vipo_access_token:
-                logger.warning("Không có token từ login, thử lấy từ localStorage...")
-                try:
-                    vipo_access_token = driver.execute_script("""
-                        return localStorage.getItem('vipo_access_token');
-                    """)
-                    if vipo_access_token:
-                        logger.info("Đã lấy được token từ localStorage")
-                except Exception as e:
-                    logger.warning(f"Không thể lấy token từ localStorage: {e}")
+            # ============================================================
+            # TODO: [TẠM THỜI COMMENT] - Vipo hiện tại không yêu cầu đăng nhập
+            # Nếu sau này Vipo yêu cầu đăng nhập lại, bỏ comment phần code dưới đây:
+            # ============================================================
+            # login_start = time.time()
+            # login_success, vipo_access_token = self._login_to_vipo(driver)
+            # login_duration = (time.time() - login_start) * 1000
+            # logger.info(f"⏱️ [EXTRACTOR VIPO] Login hoàn thành trong {login_duration:.2f}ms (Success: {login_success})")
+            # 
+            # # Nếu không có token, thử lấy từ localStorage
+            # if not vipo_access_token:
+            #     logger.warning("⏱️ [EXTRACTOR VIPO] Không có token từ login, thử lấy từ localStorage...")
+            #     localstorage_start = time.time()
+            #     try:
+            #         vipo_access_token = driver.execute_script("""
+            #             return localStorage.getItem('vipo_access_token');
+            #         """)
+            #         localstorage_duration = (time.time() - localstorage_start) * 1000
+            #         if vipo_access_token:
+            #             logger.info(f"⏱️ [EXTRACTOR VIPO] Đã lấy được token từ localStorage trong {localstorage_duration:.2f}ms")
+            #         else:
+            #             logger.warning(f"⏱️ [EXTRACTOR VIPO] Không lấy được token từ localStorage sau {localstorage_duration:.2f}ms")
+            #     except Exception as e:
+            #         localstorage_duration = (time.time() - localstorage_start) * 1000
+            #         logger.warning(f"⏱️ [EXTRACTOR VIPO] Không thể lấy token từ localStorage sau {localstorage_duration:.2f}ms: {e}")
+            # 
+            # if not vipo_access_token:
+            #     total_duration = (time.time() - extract_start_time) * 1000
+            #     logger.error(f"⏱️ [EXTRACTOR VIPO] Không có vipo_access_token sau {total_duration:.2f}ms")
+            #     return self._create_error_response(
+            #         message="Không có vipo_access_token để gọi API",
+            #         original_url=original_url,
+            #         final_url=final_url,
+            #         resolve_result=resolve_result
+            #     )
+            # ============================================================
+            # END OF COMMENTED LOGIN CODE
+            # ============================================================
             
-            if not vipo_access_token:
-                return self._create_error_response(
-                    message="Không có vipo_access_token để gọi API",
-                    original_url=original_url,
-                    final_url=final_url,
-                    resolve_result=resolve_result
-                )
+            # Hiện tại: Không cần đăng nhập, set token = None hoặc empty string
+            # API sẽ hoạt động mà không cần token (hoặc sẽ báo lỗi nếu cần)
+            login_success = False
+            vipo_access_token = None  # Không cần token hiện tại
             
             # BƯỚC 3: Search product và chờ redirect
             redirect_url = self._search_product(driver, final_url)
             
             if not redirect_url:
+                logger.error("Không thể search product hoặc không redirect")
                 return self._create_error_response(
                     message="Không thể search product hoặc không redirect",
                     original_url=original_url,
@@ -891,6 +923,7 @@ class ExtractorVipo:
             merchant_id = url_params['merchant_id']
             
             if not product_id:
+                logger.error("Không thể extract product_id từ redirect URL")
                 return self._create_error_response(
                     message="Không thể extract product_id từ redirect URL",
                     original_url=original_url,
@@ -899,16 +932,11 @@ class ExtractorVipo:
                     resolve_result=resolve_result
                 )
             
-            logger.info(f"Extracted params: product_id={product_id}, platform_type={platform_type}, merchant_id={merchant_id}")
-            
             # BƯỚC 5: Gọi API với fallback strategy
             api_result = self._call_vipo_api(driver, product_id, platform_type, merchant_id, vipo_access_token)
             
-            # Log kết quả API call
-            logger.info(f"API call result status: {api_result.get('status')}")
             if api_result.get('status') != 'success':
                 logger.error(f"API call thất bại: {api_result.get('message', 'Unknown error')}")
-                logger.error(f"API result: {api_result}")
             
             # Tạo response thành công
             return {
