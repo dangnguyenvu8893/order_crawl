@@ -19,8 +19,57 @@ class TransformerVipo:
             return default
 
     def detect_source_type(self, platform_type: int, url: str = '') -> str:
-        """Xác định source type thực tế từ platform_type hoặc URL"""
-        # Mapping platform_type
+        """
+        Xác định source type thực tế từ URL (ưu tiên) hoặc platform_type (fallback).
+        Ưu tiên detect từ URL vì URL sản phẩm là nguồn chính xác nhất.
+        """
+        # Ưu tiên: Detect từ URL trước (chính xác hơn platform_type)
+        if url:
+            url_lower = url.lower()
+            
+            # Kiểm tra Tmall trước (specific patterns trước general)
+            tmall_patterns = [
+                r'detail\.tmall\.com',  # Ưu tiên: pattern cụ thể
+                r'item\.tmall\.com',
+                r'm\.tmall\.com',
+                r'h5\.tmall\.com',
+                r'tmall\.com',
+            ]
+            for pattern in tmall_patterns:
+                if re.search(pattern, url_lower):
+                    return 'tmall'
+            
+            # Kiểm tra spm parameter (Tmall thường có spm=a21bo.tmall)
+            if 'spm=a21bo.tmall' in url_lower:
+                return 'tmall'
+            
+            # Mapping các domain patterns - sắp xếp theo độ ưu tiên (specific trước general)
+            source_patterns = [
+                # 1688 patterns
+                ('1688', [
+                    r'detail\.1688\.com',
+                    r'offer\.1688\.com',
+                    r'1688\.com'
+                ]),
+                # Taobao patterns
+                ('taobao', [
+                    r'item\.taobao\.com',
+                    r'taobao\.com'
+                ]),
+                # Pinduoduo patterns
+                ('pinduoduo', [
+                    r'yangkeduo\.com',
+                    r'pinduoduo\.com',
+                    r'pdd\.cn'
+                ])
+            ]
+            
+            for source, patterns in source_patterns:
+                for pattern in patterns:
+                    if re.search(pattern, url_lower):
+                        return source
+        
+        # Fallback: Detect từ platform_type (nếu không có URL hoặc không match)
         platform_type_map = {
             21: 'taobao',
             22: 'tmall',
@@ -29,39 +78,6 @@ class TransformerVipo:
         
         if platform_type in platform_type_map:
             return platform_type_map[platform_type]
-        
-        # Fallback: detect từ URL
-        if not url:
-            return 'taobao'  # Default
-        
-        url_lower = url.lower()
-        
-        # Kiểm tra Tmall trước
-        if 'spm=a21bo.tmall' in url_lower or 'tmall' in url_lower:
-            return 'tmall'
-        
-        # Mapping các domain patterns
-        source_patterns = [
-            ('1688', [
-                r'detail\.1688\.com',
-                r'offer\.1688\.com',
-                r'1688\.com'
-            ]),
-            ('taobao', [
-                r'item\.taobao\.com',
-                r'taobao\.com'
-            ]),
-            ('pinduoduo', [
-                r'yangkeduo\.com',
-                r'pinduoduo\.com',
-                r'pdd\.cn'
-            ])
-        ]
-        
-        for source, patterns in source_patterns:
-            for pattern in patterns:
-                if re.search(pattern, url_lower):
-                    return source
         
         return 'taobao'  # Default
 
@@ -631,8 +647,12 @@ class TransformerVipo:
         url = self.extract_url(data) or raw.get('url') or ''
         platform_type = self.extract_platform_type(data)
         
-        # Xác định source type thực tế
-        actual_source_type = self.detect_source_type(platform_type, url)
+        # Ưu tiên: Detect source type từ original_url hoặc final_url (URL sản phẩm thực tế)
+        # Không dùng URL đã được resolve vì có thể bị đổi domain (tmall -> taobao)
+        detect_url = raw.get('original_url') or raw.get('final_url') or url
+        
+        # Xác định source type thực tế từ URL sản phẩm
+        actual_source_type = self.detect_source_type(platform_type, detect_url)
 
         # Trả về cấu trúc giống transformer_1688.py và transformer_pugo.py
         return {
