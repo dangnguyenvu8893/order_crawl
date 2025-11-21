@@ -27,24 +27,16 @@ class TransformerVipo:
         if url:
             url_lower = url.lower()
             
-            # Kiểm tra Tmall trước (specific patterns trước general)
-            tmall_patterns = [
-                r'detail\.tmall\.com',  # Ưu tiên: pattern cụ thể
-                r'item\.tmall\.com',
-                r'm\.tmall\.com',
-                r'h5\.tmall\.com',
-                r'tmall\.com',
-            ]
-            for pattern in tmall_patterns:
-                if re.search(pattern, url_lower):
-                    return 'tmall'
-            
-            # Kiểm tra spm parameter (Tmall thường có spm=a21bo.tmall)
-            if 'spm=a21bo.tmall' in url_lower:
-                return 'tmall'
-            
+            # ƯU TIÊN: Kiểm tra domain trước (chính xác nhất)
             # Mapping các domain patterns - sắp xếp theo độ ưu tiên (specific trước general)
             source_patterns = [
+                # Tmall patterns (kiểm tra trước Taobao vì có thể có item.taobao.com nhưng là Tmall)
+                ('tmall', [
+                    r'detail\.tmall\.com',  # Ưu tiên: pattern cụ thể
+                    r'item\.tmall\.com',
+                    r'm\.tmall\.com',
+                    r'h5\.tmall\.com',
+                ]),
                 # 1688 patterns
                 ('1688', [
                     r'detail\.1688\.com',
@@ -68,6 +60,12 @@ class TransformerVipo:
                 for pattern in patterns:
                     if re.search(pattern, url_lower):
                         return source
+            
+            # Fallback: Kiểm tra spm parameter (chỉ khi domain không rõ ràng)
+            # Nếu URL là item.taobao.com nhưng có spm=a21bo.tmall → có thể là Tmall
+            # Nhưng ưu tiên domain trước, chỉ dùng parameter khi không match domain nào
+            if 'spm=a21bo.tmall' in url_lower:
+                return 'tmall'
         
         # Fallback: Detect từ platform_type (nếu không có URL hoặc không match)
         platform_type_map = {
