@@ -65,6 +65,16 @@ class ParserNhaphangchina:
                 except Exception:
                     pass
         
+        # Extract SKU properties từ js_array (có tiếng Trung) - ưu tiên hơn HTML
+        if js_array:
+            sku_properties_from_js = self._extract_sku_properties_from_js_array(js_array)
+            if sku_properties_from_js:
+                product["sku_properties"] = sku_properties_from_js
+        
+        # Fallback: Extract từ HTML nếu chưa có từ js_array
+        if not product["sku_properties"]:
+            product["sku_properties"] = self._extract_sku_properties(soup)
+        
         if js_array:
             sku_list = self._build_sku_list(js_array, exchange_rate)
             product["sku_list"] = sku_list
@@ -83,13 +93,10 @@ class ParserNhaphangchina:
                 except Exception:
                     product["max_price"] = "0"
 
-            if not product["source_id"]:
-                # Từ js array entries
-                for entry in js_array.values():
-                    if isinstance(entry, list) and len(entry) >= 7:
-                        product["source_id"] = str(entry[6])
-                        break
+            # Note: entry[6] trong js_array là property path (ví dụ "0:0;1:0"), không phải source_id
+            # Không lấy source_id từ js_array
 
+        # Ưu tiên: Extract source_id từ URL (chính xác hơn)
         if not product["source_id"]:
             product["source_id"] = self._extract_source_id_from_source_url(
                 product["source_url"]
@@ -215,9 +222,14 @@ class ParserNhaphangchina:
         return images
 
     def _extract_sku_properties(self, soup: BeautifulSoup) -> List[Dict[str, Any]]:
+        """
+        Extract SKU properties từ HTML (ưu tiên tiếng Trung như Vipo).
+        Hỗ trợ cả .detail-taobao-tmall và .detail-1688 structure.
+        """
         result: List[Dict[str, Any]] = []
+        
+        # Method 1: Extract từ .detail-taobao-tmall .row (Taobao/Tmall structure)
         property_rows = soup.select(".detail-taobao-tmall .row")
-
         for row in property_rows:
             label_node = row.select_one(".c-font-bold")
             select_node = row.select_one("[data-property-select]")
@@ -228,10 +240,11 @@ class ParserNhaphangchina:
             values: List[Dict[str, Any]] = []
 
             for prop in select_node.select(".pd-property"):
+                # Ưu tiên tiếng Trung: namechuan (tiếng Trung) > proptitle > property-name > text
                 value_name = (
-                    prop.get("property-name")
-                    or prop.get("namechuan")
-                    or prop.get("proptitle")
+                    prop.get("namechuan")  # Ưu tiên: tiếng Trung
+                    or prop.get("proptitle")  # Fallback: có thể có tiếng Trung
+                    or prop.get("property-name")
                     or prop.get_text(strip=True)
                 )
                 entry: Dict[str, Any] = {"name": value_name.strip() if value_name else ""}
@@ -244,7 +257,78 @@ class ParserNhaphangchina:
 
             if name and values:
                 result.append({"name": name, "values": values})
+        
+        # Method 2: Extract từ .detail-1688 table (1688 structure - từ HTML user cung cấp)
+        if not result:
+            detail_1688 = soup.select_one(".detail-1688")
+            if detail_1688:
+                # Tìm table protable
+                protable = detail_1688.select_one("table.protable")
+                if protable:
+                    # Extract từ table rows - mỗi row là một SKU variant
+                    # Properties được extract từ js_array thay vì table
+                    # Table chỉ hiển thị SKU variants, không phải properties list
+                    pass  # Properties sẽ được extract từ js_array trong _build_sku_list
+        
+        # Method 3: Extract từ js_array nếu có (fallback - properties trong spec_display)
+        # Note: js_array đã được dùng trong _build_sku_list, nhưng properties structure
+        # cần được extract riêng từ HTML selectors hoặc từ js_array structure khác
+        
+        return result
 
+    def _extract_sku_properties_from_js_array(
+        self, js_array: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Extract SKU properties từ js_array (ưu tiên tiếng Trung như Vipo).
+        Format: "0:0:颜色:白色;1:0:尺码:S" -> properties: [颜色: [白色], 尺码: [S, M, L, XL]]
+        """
+        result: List[Dict[str, Any]] = []
+        properties_map: Dict[str, Dict[str, Any]] = {}  # {property_name: {values: set, index: int}}
+        
+        for key, value in js_array.items():
+            if not isinstance(value, list) or len(value) < 3:
+                continue
+            
+            spec_display = value[2] if len(value) > 2 else ""
+            if not spec_display:
+                continue
+            
+            # Parse spec_display: "0:0:颜色:白色;1:0:尺码:S"
+            for chunk in spec_display.split(";"):
+                chunk = chunk.strip()
+                if not chunk or ":" not in chunk:
+                    continue
+                
+                parts = chunk.split(":")
+                if len(parts) >= 4:
+                    # Format: "0:0:颜色:白色"
+                    prop_index = parts[0]  # "0"
+                    value_index = parts[1]  # "0"
+                    prop_name = parts[2]  # "颜色" (tiếng Trung)
+                    value_name = parts[3]  # "白色" (tiếng Trung)
+                    
+                    if prop_name not in properties_map:
+                        properties_map[prop_name] = {
+                            "name": prop_name,
+                            "values": set(),
+                            "index": int(prop_index) if prop_index.isdigit() else 999
+                        }
+                    
+                    properties_map[prop_name]["values"].add(value_name)
+        
+        # Convert to list và sort theo index
+        for prop_name, prop_data in sorted(
+            properties_map.items(), key=lambda x: x[1]["index"]
+        ):
+            values_list = [
+                {"name": val} for val in sorted(prop_data["values"])
+            ]
+            result.append({
+                "name": prop_data["name"],
+                "values": values_list
+            })
+        
         return result
 
     def _extract_seller_info(self, soup: BeautifulSoup) -> Dict[str, Any]:
@@ -541,15 +625,42 @@ class ParserNhaphangchina:
         return ranges
 
     def _detect_platform(self, url: str) -> str:
+        """
+        Detect platform từ URL (ưu tiên URL sản phẩm thực tế).
+        Kiểm tra specific patterns trước general patterns.
+        """
         if not url:
             return "nhaphangchina"
+        
         url_lower = url.lower()
+        
+        # Kiểm tra Tmall trước (specific patterns trước general)
+        tmall_patterns = [
+            r'detail\.tmall\.com',  # Ưu tiên: pattern cụ thể
+            r'item\.tmall\.com',
+            r'm\.tmall\.com',
+            r'h5\.tmall\.com',
+        ]
+        for pattern in tmall_patterns:
+            if re.search(pattern, url_lower):
+                return "tmall"
+        
+        # Kiểm tra spm parameter (Tmall thường có spm=a21bo.tmall)
+        if 'spm=a21bo.tmall' in url_lower:
+            return "tmall"
+        
+        # Kiểm tra general tmall (fallback)
         if "tmall" in url_lower:
             return "tmall"
-        if "taobao" in url_lower:
+        
+        # Kiểm tra Taobao
+        if re.search(r'item\.taobao\.com', url_lower) or "taobao" in url_lower:
             return "taobao"
-        if "1688" in url_lower:
+        
+        # Kiểm tra 1688
+        if re.search(r'detail\.1688\.com|offer\.1688\.com', url_lower) or "1688" in url_lower:
             return "1688"
+        
         return "nhaphangchina"
 
     def _extract_source_id_from_source_url(self, url: str) -> Optional[str]:
