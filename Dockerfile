@@ -1,6 +1,9 @@
 # Sử dụng Python 3.11 slim image
 FROM python:3.11-slim as base
 
+# Dùng bash để hỗ trợ pipefail
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Cài đặt các dependencies cần thiết cho Selenium
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -75,19 +78,25 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Cài đặt ChromeDriver (nếu cần)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
-        # Cài đặt ChromeDriver cho AMD64
-        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1-3) && \
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}') && \
         echo "Chrome version: $CHROME_VERSION" && \
-        # Sử dụng Chrome for Testing API mới
-        CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_VERSION}") && \
-        echo "ChromeDriver version: $CHROMEDRIVER_VERSION" && \
-        wget -O /tmp/chromedriver.zip "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" && \
-        unzip /tmp/chromedriver.zip -d /tmp/ && \
+        echo "Fetching latest ChromeDriver version..." && \
+        CHROMEDRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" | python3 -c "import json, sys; data=json.load(sys.stdin); print(data.get('channels', {}).get('Stable', {}).get('version', ''))") && \
+        if [ -z "$CHROMEDRIVER_VERSION" ]; then \
+            echo "Warning: Could not fetch from API, using Chrome version" && \
+            CHROMEDRIVER_VERSION=$(echo "$CHROME_VERSION" | cut -d'.' -f1-3); \
+        fi && \
+        echo "ChromeDriver version to install: $CHROMEDRIVER_VERSION" && \
+        DOWNLOAD_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip" && \
+        echo "Downloading from: $DOWNLOAD_URL" && \
+        wget -q --show-progress -O /tmp/chromedriver.zip "$DOWNLOAD_URL" && \
+        unzip -q /tmp/chromedriver.zip -d /tmp/ && \
         mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ && \
         chmod +x /usr/local/bin/chromedriver && \
-        rm -rf /tmp/chromedriver*; \
+        rm -rf /tmp/chromedriver* && \
+        echo "ChromeDriver installed successfully:" && \
+        chromedriver --version; \
     else \
-        # Chromium driver đã được cài đặt cùng với chromium package
         echo "Chromium driver already installed"; \
     fi
 

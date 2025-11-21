@@ -22,6 +22,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Local application imports
 from parser_1688 import parser_1688
+from parser_nhaphangchina import parser_nhaphangchina
 from parser_pugo import parser_pugo
 
 # from playwright.sync_api import sync_playwright  # Removed - using Selenium now
@@ -2054,6 +2055,30 @@ def pugo_clear_session():
         logger.error(f"Lỗi khi xóa session: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/nhaphangchina-session-info', methods=['GET'])
+def nhaphangchina_session_info():
+    """Lấy thông tin session nhaphangchina hiện tại"""
+    try:
+        from py_extractors.extractor_nhaphangchina import ExtractorNhaphangchina
+        extractor = ExtractorNhaphangchina()
+        session_info = extractor.get_session_info()
+        return jsonify({"status": "success", "session_info": session_info})
+    except Exception as e:
+        logger.error(f"Lỗi khi lấy session nhaphangchina: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/nhaphangchina-clear-session', methods=['POST'])
+def nhaphangchina_clear_session():
+    """Xóa session nhaphangchina hiện tại"""
+    try:
+        from py_extractors.extractor_nhaphangchina import ExtractorNhaphangchina
+        extractor = ExtractorNhaphangchina()
+        extractor.clear_session()
+        return jsonify({"status": "success", "message": "Đã xóa session nhaphangchina"})
+    except Exception as e:
+        logger.error(f"Lỗi khi xóa session nhaphangchina: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @swag_from({
     'tags': ['extractor'],
     'summary': 'Extractor 1688 (raw) - theo dõi dữ liệu thô như backend extractor',
@@ -2192,6 +2217,137 @@ def get_cookies_info():
     except Exception as e:
         logger.error(f"Lỗi khi lấy thông tin cookies: {e}")
         return jsonify({"error": str(e)}), 500
+
+# ==================== NHAPHANGCHINA ENDPOINTS ====================
+
+@swag_from({
+    'tags': ['extractor'],
+    'summary': 'Extractor Nhaphangchina (raw)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body',
+        'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=847402700057'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Raw extractor output', 'schema': {'type': 'object'}}}
+})
+@app.route('/extract-nhaphangchina', methods=['POST'])
+def route_extract_nhaphangchina():
+    try:
+        from py_extractors.extractor_nhaphangchina import extractor_nhaphangchina
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        result = extractor_nhaphangchina.extract(url)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Extractor nhaphangchina error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Nhaphangchina (chuẩn hoá)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body',
+        'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'raw_data': {'type': 'object'}
+            },
+            'required': ['raw_data']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-nhaphangchina', methods=['POST'])
+def route_transform_nhaphangchina():
+    try:
+        from py_transformers.transformer_nhaphangchina import transformer_nhaphangchina
+        payload = request.get_json() or {}
+        if isinstance(payload, dict) and 'raw_data' in payload:
+            raw_input = payload
+        elif isinstance(payload, dict) and 'status' in payload:
+            raw_input = {'raw_data': payload}
+        else:
+            return jsonify({'error': 'Body phải là {"raw_data": {...}} hoặc JSON có key "status"'}), 400
+        transformed = transformer_nhaphangchina.transform(raw_input)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer nhaphangchina error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Nhaphangchina từ URL',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=847402700057'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-nhaphangchina-from-url', methods=['POST'])
+def route_transform_nhaphangchina_from_url():
+    try:
+        from py_extractors.extractor_nhaphangchina import extractor_nhaphangchina
+        from py_transformers.transformer_nhaphangchina import transformer_nhaphangchina
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        raw = extractor_nhaphangchina.extract(url)
+        transformed = transformer_nhaphangchina.transform(raw)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer nhaphangchina error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['parser'],
+    'summary': 'Parse Nhaphangchina response (HTML/JSON)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'payload': {
+                    'type': 'object',
+                    'description': 'Dữ liệu trả về từ loaddetailajax (HTML hoặc JSON string)'
+                }
+            },
+            'required': ['payload']
+        }
+    }],
+    'responses': {200: {'description': 'Parsed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/parse-nhaphangchina', methods=['POST'])
+def route_parse_nhaphangchina():
+    data = request.get_json() or {}
+    payload = data.get('payload')
+    if payload is None:
+        return jsonify({'error': 'payload is required'}), 400
+    try:
+        result = parser_nhaphangchina.parse(payload)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Parser nhaphangchina error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ==================== PUGO.VN ENDPOINTS ====================
 

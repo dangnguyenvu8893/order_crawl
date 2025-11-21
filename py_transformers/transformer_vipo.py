@@ -290,11 +290,33 @@ class TransformerVipo:
         # Ưu tiên: data.price_ranges (global)
         price_ranges = data.get('price_ranges', [])
         if isinstance(price_ranges, list) and price_ranges:
-            for p in price_ranges:
+            # Sort theo start_quantity để đảm bảo tính endAmount đúng (học từ pattern Pugo: sort trước khi xử lý)
+            sorted_ranges = sorted(
+                price_ranges,
+                key=lambda x: int(x.get('beginAmount') or x.get('start_quantity') or 0) if isinstance(x, dict) else 0
+            )
+            
+            for i, p in enumerate(sorted_ranges):
                 if isinstance(p, dict):
                     begin = int(p.get('beginAmount') or p.get('start_quantity') or 1)
                     price = float(p.get('price') or 0)
-                    end = int(p.get('endAmount') or p.get('maxQuantity') or 999999)
+                    
+                    # Tính endAmount từ start_quantity của item tiếp theo (theo pattern: nếu không có endAmount trong data)
+                    # Nếu có item tiếp theo: endAmount = start_quantity của item tiếp theo - 1
+                    # Nếu không có: endAmount = 999999
+                    if p.get('endAmount') or p.get('maxQuantity'):
+                        # Ưu tiên: dùng endAmount từ data nếu có (như Pugo)
+                        end = int(p.get('endAmount') or p.get('maxQuantity') or 999999)
+                    elif i + 1 < len(sorted_ranges):
+                        # Fallback: tính từ item tiếp theo (Vipo API không có endAmount)
+                        next_item = sorted_ranges[i + 1]
+                        if isinstance(next_item, dict):
+                            next_start = int(next_item.get('beginAmount') or next_item.get('start_quantity') or 999999)
+                            end = next_start - 1
+                        else:
+                            end = 999999
+                    else:
+                        end = 999999
                     
                     out.append({
                         'beginAmount': begin,
@@ -581,6 +603,16 @@ class TransformerVipo:
         if not isinstance(data, dict):
             logger.error(f"Transformer Vipo: data không phải dict: {type(data)}")
             return {}
+        
+        # Fix: Handle nested data structure từ Vipo API
+        # Vipo API trả về: {"status": "01", "message": "Successful!", "data": {...}}
+        # price_ranges nằm trong data.data.price_ranges, không phải data.price_ranges
+        if isinstance(data, dict) and 'data' in data and isinstance(data.get('data'), dict):
+            # Kiểm tra nếu data có nested data và có status "01" (Vipo API format)
+            if data.get('status') == '01' or 'price_ranges' in data.get('data', {}):
+                logger.info("Transformer Vipo: Detected nested data structure (Vipo API format)")
+                data = data.get('data', {})
+                logger.info(f"Transformer Vipo: Using nested data, keys count: {len(list(data.keys())) if isinstance(data, dict) else 0}")
         
         # Log data để debug
         logger.info(f"Transformer Vipo: Final data dict, keys count: {len(list(data.keys())) if isinstance(data, dict) else 0}")
