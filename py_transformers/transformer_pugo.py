@@ -145,7 +145,74 @@ class TransformerPugo:
                 if out:
                     break
 
-        # 2) Fallback: dựng properties từ skuMaps (COLOR/SIZE) nếu có
+        # 2) Ưu tiên: Parse từ skuMaps để extract property values đầy đủ (học từ extract_sku_list)
+        if not out:
+            sku_maps = self.get_nested(data, 'data.skuMaps', []) or self.get_nested(data, 'skuMaps', [])
+            if isinstance(sku_maps, list) and sku_maps:
+                # Parse skuMap để extract property values đầy đủ
+                # Format: "颜色分类--黑色 常规款;尺码--M 90-105斤"
+                # → property="颜色分类", value="黑色 常规款"
+                properties_map: Dict[str, Set[str]] = {}  # {property_name: set of values}
+                
+                for sku in sku_maps:
+                    if not isinstance(sku, dict):
+                        continue
+                    
+                    sku_map_str = sku.get('skuMap')
+                    if isinstance(sku_map_str, str) and sku_map_str.strip():
+                        # Parse format: "颜色分类--黑色 常规款;尺码--M 90-105斤"
+                        for seg in sku_map_str.split(';'):
+                            seg = seg.strip()
+                            if not seg or '--' not in seg:
+                                continue
+                            
+                            # Split property name và value
+                            parts = seg.split('--', 1)
+                            if len(parts) == 2:
+                                prop_name = parts[0].strip()
+                                prop_value = parts[1].strip()
+                                
+                                if prop_name and prop_value:
+                                    if prop_name not in properties_map:
+                                        properties_map[prop_name] = set()
+                                    properties_map[prop_name].add(prop_value)
+                
+                # Convert to output format
+                if properties_map:
+                    # Lấy images từ itemPropertys nếu có
+                    item_props = self.get_nested(data, 'data.itemPropertys', []) or self.get_nested(data, 'itemPropertys', [])
+                    image_map: Dict[str, str] = {}  # {value_name: image_url}
+                    
+                    if isinstance(item_props, list):
+                        for prop in item_props:
+                            prop_name = prop.get('title') or prop.get('name') or ''
+                            for child in prop.get('childPropertys') or []:
+                                if isinstance(child, dict):
+                                    child_title = child.get('title') or child.get('properties') or ''
+                                    img = child.get('image') or child.get('bigImage')
+                                    if child_title and img:
+                                        image_map[child_title] = img
+                    
+                    # Build output
+                    for prop_name, value_set in properties_map.items():
+                        values: List[Dict[str, Any]] = []
+                        for value_name in sorted(value_set):
+                            item = {'name': value_name}
+                            # Try to find image from itemPropertys
+                            # Match by exact name or partial match
+                            for img_key, img_url in image_map.items():
+                                if img_key == value_name or value_name in img_key or img_key in value_name:
+                                    item['image'] = img_url
+                                    break
+                            values.append(item)
+                        
+                        if values:
+                            out.append({'name': prop_name, 'values': values})
+                    
+                    if out:
+                        return out
+
+        # 3) Fallback: dựng properties từ itemPropertys (có thể thiếu thông tin)
         if not out:
             item_props = self.get_nested(data, 'data.itemPropertys', []) or self.get_nested(data, 'itemPropertys', [])
             if isinstance(item_props, list) and item_props:
