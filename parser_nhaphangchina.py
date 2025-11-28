@@ -65,13 +65,17 @@ class ParserNhaphangchina:
                 except Exception:
                     pass
         
-        # Extract SKU properties từ js_array (có tiếng Trung) - ưu tiên hơn HTML
+        # Extract properties từ js_array và images từ HTML, sau đó merge lại
         if js_array:
             sku_properties_from_js = self._extract_sku_properties_from_js_array(js_array)
             if sku_properties_from_js:
+                # Extract images từ HTML và merge vào properties
+                image_map = self._extract_property_value_images(soup, html)
+                if image_map:
+                    self._enrich_properties_with_images(sku_properties_from_js, image_map)
                 product["sku_properties"] = sku_properties_from_js
         
-        # Fallback: Extract từ HTML nếu chưa có từ js_array
+        # Fallback: Dùng HTML method nếu chưa có
         if not product["sku_properties"]:
             product["sku_properties"] = self._extract_sku_properties(soup)
         
@@ -239,7 +243,15 @@ class ParserNhaphangchina:
             name = label_node.get_text(strip=True)
             values: List[Dict[str, Any]] = []
 
-            for prop in select_node.select(".pd-property"):
+            # ✅ FIX: Tìm .pd-property trong .pd-text hoặc trực tiếp trong select_node
+            pd_properties = select_node.select(".pd-property")
+            if not pd_properties:
+                # Fallback: Tìm trong .pd-text
+                pd_text = select_node.select_one(".pd-text")
+                if pd_text:
+                    pd_properties = pd_text.select(".pd-property")
+            
+            for prop in pd_properties:
                 # Ưu tiên tiếng Trung: namechuan (tiếng Trung) > proptitle > property-name > text
                 value_name = (
                     prop.get("namechuan")  # Ưu tiên: tiếng Trung
@@ -248,11 +260,26 @@ class ParserNhaphangchina:
                     or prop.get_text(strip=True)
                 )
                 entry: Dict[str, Any] = {"name": value_name.strip() if value_name else ""}
-                img = prop.select_one("img")
+                
+                # ✅ FIX: Tìm img trong .img-detail hoặc bất kỳ img nào trong prop
+                img = prop.select_one("img.img-detail") or prop.select_one("img")
                 if img:
-                    entry["image"] = (
-                        img.get("data-image") or img.get("ng-src") or img.get("src")
+                    # ✅ FIX: Ưu tiên ng-src (AngularJS), sau đó data-image, cuối cùng src
+                    image_url = (
+                        img.get("ng-src") or 
+                        img.get("data-image") or 
+                        img.get("src")
                     )
+                    if image_url:
+                        # ✅ FIX: Clean URL - remove CORS proxy nếu có
+                        if "cors-anywhere" in image_url:
+                            # Extract original URL từ CORS proxy
+                            import re
+                            match = re.search(r'url=([^&]+)', image_url)
+                            if match:
+                                import urllib.parse
+                                image_url = urllib.parse.unquote(match.group(1))
+                        entry["image"] = image_url
                 values.append(entry)
 
             if name and values:
@@ -330,6 +357,159 @@ class ParserNhaphangchina:
             })
         
         return result
+
+    def _extract_property_value_images(self, soup: BeautifulSoup, html_str: str = "") -> Dict[str, str]:
+        """
+        Extract image URLs cho property values từ HTML.
+        Returns: {value_name: image_url} mapping
+        
+        Dùng regex trực tiếp vì BeautifulSoup có thể không parse đúng
+        structure phức tạp của AngularJS templates.
+        """
+        image_map: Dict[str, str] = {}
+        
+        # Dùng regex trực tiếp để extract namechuan + ng-src pairs
+        # Structure: <div class="pd-property" namechuan="..." ...> ... <img ng-src="..." />
+        if not html_str:
+            html_str = str(soup) if hasattr(soup, '__str__') else str(soup.prettify())
+        
+        pattern = r'<div[^>]*class=\"[^\"]*pd-property[^\"]*\"[^>]*namechuan=\"([^\"]+)\"[^>]*>.*?<img[^>]*ng-src=\"([^\"]+)\"'
+        matches = re.findall(pattern, html_str, re.DOTALL | re.IGNORECASE)
+        
+        for namechuan, ng_src in matches:
+            if not namechuan or not ng_src:
+                continue
+            
+            # Clean URL - remove CORS proxy nếu có
+            image_url = ng_src
+            if "cors-anywhere" in image_url or "jancargo.com" in image_url:
+                import urllib.parse
+                # Extract URL từ query parameter
+                match = re.search(r'url=([^&]+)', image_url)
+                if match:
+                    image_url = urllib.parse.unquote(match.group(1))
+                else:
+                    # Fallback: Try to extract from path
+                    parsed = urllib.parse.urlparse(image_url)
+                    if parsed.path and "url=" in parsed.path:
+                        match = re.search(r'url=([^&]+)', parsed.path)
+                        if match:
+                            image_url = urllib.parse.unquote(match.group(1))
+            
+            # Normalize name
+            normalized_name = namechuan.strip()
+            
+            # Store both original and normalized for flexible matching
+            image_map[normalized_name] = image_url
+            image_map[normalized_name.lower()] = image_url
+        
+        # Fallback: Dùng BeautifulSoup nếu regex không tìm thấy gì
+        if not image_map:
+            select_nodes = soup.select("[data-property-select]")
+            
+            if not select_nodes:
+                property_rows = soup.select(".detail-taobao-tmall .row")
+                if not property_rows:
+                    property_rows = soup.select(".row")
+                
+                for row in property_rows:
+                    if row.get("data-property-select"):
+                        select_nodes.append(row)
+            
+            for select_node in select_nodes:
+                pd_text = select_node.select_one(".pd-text")
+                if pd_text:
+                    pd_properties = pd_text.select(".pd-property")
+                else:
+                    pd_properties = select_node.select(".pd-property")
+                
+                for prop in pd_properties:
+                    value_name = (
+                        prop.get("namechuan") or
+                        prop.get("proptitle") or
+                        prop.get("property-name") or
+                        prop.get_text(strip=True)
+                    )
+                    
+                    if not value_name:
+                        continue
+                    
+                    normalized_name = value_name.strip()
+                    item_image = prop.select_one(".item-image img") or prop.select_one(".pd-item-search img")
+                    img = item_image or prop.select_one("img.img-detail") or prop.select_one("img")
+                    
+                    if img:
+                        image_url = (
+                            img.get("ng-src") or 
+                            img.get("data-image") or 
+                            img.get("src")
+                        )
+                        if image_url:
+                            if "cors-anywhere" in image_url or "jancargo.com" in image_url:
+                                import urllib.parse
+                                match = re.search(r'url=([^&]+)', image_url)
+                                if match:
+                                    image_url = urllib.parse.unquote(match.group(1))
+                            
+                            image_map[normalized_name] = image_url
+                            image_map[normalized_name.lower()] = image_url
+        
+        return image_map
+
+    def _enrich_properties_with_images(
+        self, 
+        properties: List[Dict[str, Any]], 
+        image_map: Dict[str, str]
+    ) -> None:
+        """
+        Enrich properties với images từ image_map.
+        Modifies properties in-place.
+        """
+        matched_count = 0
+        for prop in properties:
+            if not isinstance(prop, dict) or "values" not in prop:
+                continue
+            
+            for value in prop.get("values", []):
+                if not isinstance(value, dict) or "name" not in value:
+                    continue
+                
+                value_name = value.get("name", "").strip()
+                if not value_name:
+                    continue
+                
+                # Try exact match first
+                if value_name in image_map:
+                    value["image"] = image_map[value_name]
+                    matched_count += 1
+                    continue
+                
+                # Try case-insensitive match
+                value_name_lower = value_name.lower()
+                if value_name_lower in image_map:
+                    value["image"] = image_map[value_name_lower]
+                    matched_count += 1
+                    continue
+                
+                # Try partial match (for values with extra text)
+                # Example: "白色【大标款】" might match "白色"
+                # Only match if one is a substring of the other (avoid false positives)
+                best_match = None
+                best_match_len = 0
+                for map_key, map_image in image_map.items():
+                    # Skip lowercase keys (already tried above)
+                    if map_key.islower() and map_key != value_name_lower:
+                        continue
+                    # Check if one contains the other (but prefer longer matches)
+                    if value_name in map_key or map_key in value_name:
+                        match_len = min(len(value_name), len(map_key))
+                        if match_len > best_match_len:
+                            best_match = map_image
+                            best_match_len = match_len
+                
+                if best_match:
+                    value["image"] = best_match
+                    matched_count += 1
 
     def _extract_seller_info(self, soup: BeautifulSoup) -> Dict[str, Any]:
         seller_info: Dict[str, Any] = {}
@@ -476,7 +656,6 @@ class ParserNhaphangchina:
                         ranges.append(entry)
                     
                     if ranges:
-                        logger.info(f"Extracted {len(ranges)} price ranges from JavaScript")
                         return ranges
             except Exception as e:
                 logger.warning(f"Failed to parse JavaScript price ranges: {e}")
@@ -536,9 +715,7 @@ class ParserNhaphangchina:
                             ranges.append(entry)
                         
                         if ranges:
-                            # Sort theo beginAmount (học từ pattern Vipo)
                             ranges.sort(key=lambda x: x.get("beginAmount", 0))
-                            logger.info(f"Extracted {len(ranges)} price ranges from HTML table")
                             return ranges
             except Exception as e:
                 logger.warning(f"Failed to parse HTML table price ranges: {e}")
@@ -579,9 +756,7 @@ class ParserNhaphangchina:
                         ranges.append(entry)
                 
                 if ranges:
-                    # Sort theo beginAmount (học từ pattern Vipo)
                     ranges.sort(key=lambda x: x.get("beginAmount", 0))
-                    logger.info(f"Extracted {len(ranges)} price ranges from cart_price_table")
                     return ranges
             except Exception as e:
                 logger.warning(f"Failed to parse cart_price_table: {e}")
