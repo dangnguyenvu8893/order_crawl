@@ -73,6 +73,12 @@ class ParserNhaphangchina:
                 image_map = self._extract_property_value_images(soup, html)
                 if image_map:
                     self._enrich_properties_with_images(sku_properties_from_js, image_map)
+                
+                # ✅ NEW: Extract sourcePropertyId/sourceValueId từ HTML và merge vào properties
+                property_value_map = self._extract_property_value_ids(soup, html)
+                if property_value_map:
+                    self._enrich_properties_with_ids(sku_properties_from_js, property_value_map)
+                
                 product["sku_properties"] = sku_properties_from_js
         
         # Fallback: Dùng HTML method nếu chưa có
@@ -260,6 +266,20 @@ class ParserNhaphangchina:
                     or prop.get_text(strip=True)
                 )
                 entry: Dict[str, Any] = {"name": value_name.strip() if value_name else ""}
+                
+                # ✅ NEW: Extract property-value để lấy prop_id:value_id
+                property_value = prop.get("property-value")
+                if property_value:
+                    # Format: "1627207:41168072016" -> prop_id:value_id
+                    parts = property_value.split(":")
+                    if len(parts) == 2:
+                        try:
+                            prop_id = int(parts[0])
+                            value_id = int(parts[1])
+                            entry["sourcePropertyId"] = prop_id
+                            entry["sourceValueId"] = value_id
+                        except (ValueError, TypeError):
+                            pass  # Ignore nếu không parse được
                 
                 # ✅ FIX: Tìm img trong .img-detail hoặc bất kỳ img nào trong prop
                 img = prop.select_one("img.img-detail") or prop.select_one("img")
@@ -510,6 +530,165 @@ class ParserNhaphangchina:
                 if best_match:
                     value["image"] = best_match
                     matched_count += 1
+
+    def _extract_property_value_ids(self, soup: BeautifulSoup, html_str: str = "") -> Dict[str, Dict[str, int]]:
+        """
+        Extract sourcePropertyId và sourceValueId từ HTML property-value attribute.
+        Returns: {value_name: {sourcePropertyId: int, sourceValueId: int}} mapping
+        
+        Format: property-value="1627207:41168072016" -> prop_id:value_id
+        """
+        id_map: Dict[str, Dict[str, int]] = {}
+        
+        if not html_str:
+            html_str = str(soup) if hasattr(soup, '__str__') else str(soup.prettify())
+        
+        # Dùng regex để extract namechuan + property-value pairs
+        # Structure: <div class="pd-property" namechuan="..." property-value="1627207:41168072016" ...>
+        pattern = r'<div[^>]*class="[^\"]*pd-property[^\"]*"[^>]*namechuan="([^\"]+)"[^>]*property-value="([^\"]+)"'
+        matches = re.findall(pattern, html_str, re.DOTALL | re.IGNORECASE)
+        
+        for namechuan, property_value in matches:
+            if not namechuan or not property_value:
+                continue
+            
+            # Parse property-value: "1627207:41168072016"
+            parts = property_value.split(":")
+            if len(parts) == 2:
+                try:
+                    prop_id = int(parts[0])
+                    value_id = int(parts[1])
+                    normalized_name = namechuan.strip()
+                    id_map[normalized_name] = {
+                        "sourcePropertyId": prop_id,
+                        "sourceValueId": value_id
+                    }
+                    # Also store lowercase for case-insensitive matching
+                    id_map[normalized_name.lower()] = {
+                        "sourcePropertyId": prop_id,
+                        "sourceValueId": value_id
+                    }
+                except (ValueError, TypeError):
+                    continue  # Ignore nếu không parse được
+        
+        # Fallback: Dùng BeautifulSoup nếu regex không tìm thấy gì
+        if not id_map:
+            select_nodes = soup.select("[data-property-select]")
+            
+            if not select_nodes:
+                property_rows = soup.select(".detail-taobao-tmall .row")
+                if not property_rows:
+                    property_rows = soup.select(".row")
+                
+                for row in property_rows:
+                    if row.get("data-property-select"):
+                        select_nodes.append(row)
+            
+            for select_node in select_nodes:
+                pd_text = select_node.select_one(".pd-text")
+                if pd_text:
+                    pd_properties = pd_text.select(".pd-property")
+                else:
+                    pd_properties = select_node.select(".pd-property")
+                
+                for prop in pd_properties:
+                    value_name = (
+                        prop.get("namechuan") or
+                        prop.get("proptitle") or
+                        prop.get("property-name") or
+                        prop.get_text(strip=True)
+                    )
+                    
+                    if not value_name:
+                        continue
+                    
+                    normalized_name = value_name.strip()
+                    property_value = prop.get("property-value")
+                    
+                    if property_value:
+                        parts = property_value.split(":")
+                        if len(parts) == 2:
+                            try:
+                                prop_id = int(parts[0])
+                                value_id = int(parts[1])
+                                id_map[normalized_name] = {
+                                    "sourcePropertyId": prop_id,
+                                    "sourceValueId": value_id
+                                }
+                                id_map[normalized_name.lower()] = {
+                                    "sourcePropertyId": prop_id,
+                                    "sourceValueId": value_id
+                                }
+                            except (ValueError, TypeError):
+                                continue
+        
+        return id_map
+
+    def _enrich_properties_with_ids(
+        self, 
+        properties: List[Dict[str, Any]], 
+        id_map: Dict[str, Dict[str, int]]
+    ) -> None:
+        """
+        Enrich properties với sourcePropertyId/sourceValueId từ id_map.
+        Modifies properties in-place.
+        """
+        # Extract sourcePropertyId từ property name (lấy từ value đầu tiên của mỗi property)
+        for prop in properties:
+            if not isinstance(prop, dict) or "values" not in prop:
+                continue
+            
+            # Lấy sourcePropertyId từ value đầu tiên (tất cả values cùng property có cùng prop_id)
+            prop_id_set = False
+            for value in prop.get("values", []):
+                if not isinstance(value, dict) or "name" not in value:
+                    continue
+                
+                value_name = value.get("name", "").strip()
+                if not value_name:
+                    continue
+                
+                # Try exact match first
+                if value_name in id_map:
+                    ids = id_map[value_name]
+                    if "sourcePropertyId" in ids:
+                        prop["sourcePropertyId"] = ids["sourcePropertyId"]
+                        prop_id_set = True
+                    if "sourceValueId" in ids:
+                        value["sourceValueId"] = ids["sourceValueId"]
+                    continue
+                
+                # Try case-insensitive match
+                value_name_lower = value_name.lower()
+                if value_name_lower in id_map:
+                    ids = id_map[value_name_lower]
+                    if "sourcePropertyId" in ids and not prop_id_set:
+                        prop["sourcePropertyId"] = ids["sourcePropertyId"]
+                        prop_id_set = True
+                    if "sourceValueId" in ids:
+                        value["sourceValueId"] = ids["sourceValueId"]
+                    continue
+                
+                # Try partial match (for values with extra text)
+                best_match = None
+                best_match_len = 0
+                for map_key, map_ids in id_map.items():
+                    # Skip lowercase keys (already tried above)
+                    if map_key.islower() and map_key != value_name_lower:
+                        continue
+                    # Check if one contains the other
+                    if value_name in map_key or map_key in value_name:
+                        match_len = min(len(value_name), len(map_key))
+                        if match_len > best_match_len:
+                            best_match = map_ids
+                            best_match_len = match_len
+                
+                if best_match:
+                    if "sourcePropertyId" in best_match and not prop_id_set:
+                        prop["sourcePropertyId"] = best_match["sourcePropertyId"]
+                        prop_id_set = True
+                    if "sourceValueId" in best_match:
+                        value["sourceValueId"] = best_match["sourceValueId"]
 
     def _extract_seller_info(self, soup: BeautifulSoup) -> Dict[str, Any]:
         seller_info: Dict[str, Any] = {}

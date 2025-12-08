@@ -172,6 +172,15 @@ class TransformerVipo:
             if not prop_name:
                 continue
             
+            # ✅ NEW: Extract sourcePropertyId từ prop_id
+            prop_entry: Dict[str, Any] = {'name': prop_name}
+            prop_id = prop.get('prop_id')
+            if prop_id is not None:
+                try:
+                    prop_entry['sourcePropertyId'] = int(prop_id)
+                except (ValueError, TypeError):
+                    pass  # Ignore nếu không parse được
+            
             # Lấy value_list với fallback paths
             values: List[Dict[str, Any]] = []
             value_list = (
@@ -199,6 +208,14 @@ class TransformerVipo:
                         
                         item = {'name': value_name}
                         
+                        # ✅ NEW: Extract sourceValueId từ value_id
+                        value_id = value.get('value_id')
+                        if value_id is not None:
+                            try:
+                                item['sourceValueId'] = int(value_id)
+                            except (ValueError, TypeError):
+                                pass  # Ignore nếu không parse được
+                        
                         # ✅ Lấy image với nhiều key options (như Pugo)
                         for img_key in ['img_url', 'image', 'imageUrl', 'img', 'src']:
                             if value.get(img_key):
@@ -211,7 +228,8 @@ class TransformerVipo:
                         values.append({'name': value})
             
             if values:
-                out.append({'name': prop_name, 'values': values})
+                prop_entry['values'] = values
+                out.append(prop_entry)
         
         return out
 
