@@ -259,11 +259,26 @@ class TransformerPugo:
                         )
                         # Đồng bộ hoá định dạng specAttrs như 1688 (thay &gt; thành | nếu có)
                         spec_attrs = spec_attrs.replace('&gt;', '|')
-                        sku_list.append({
+                        
+                        # ✅ NEW: Extract skuId từ sku (Taobao SKU ID)
+                        sku_id = (
+                            sku.get('skuId') or 
+                            sku.get('sku_id') or 
+                            sku.get('id') or 
+                            None
+                        )
+                        
+                        sku_entry = {
                             'canBookCount': str(sku.get('canBookCount') or sku.get('stock') or sku.get('quantity') or ''),
                             'price': str(sku.get('price') or sku.get('salePrice') or ''),
                             'specAttrs': spec_attrs
-                        })
+                        }
+                        
+                        # ✅ Thêm skuId nếu có
+                        if sku_id:
+                            sku_entry['skuId'] = str(sku_id)
+                        
+                        sku_list.append(sku_entry)
                 if sku_list:
                     break
 
@@ -317,11 +332,26 @@ class TransformerPugo:
                         spec = '|'.join([p for p in spec_display_parts if p])
 
                         price_value = sku.get('price') or sku.get('discountPrice') or ''
-                        sku_list.append({
+                        
+                        # ✅ NEW: Extract skuId từ sku (Taobao SKU ID)
+                        sku_id = (
+                            sku.get('skuId') or 
+                            sku.get('sku_id') or 
+                            sku.get('id') or 
+                            None
+                        )
+                        
+                        sku_entry = {
                             'canBookCount': str(sku.get('canBookCount') or sku.get('stock') or sku.get('quantity') or ''),
                             'price': str(price_value),
                             'specAttrs': spec
-                        })
+                        }
+                        
+                        # ✅ Thêm skuId nếu có
+                        if sku_id:
+                            sku_entry['skuId'] = str(sku_id)
+                        
+                        sku_list.append(sku_entry)
         
         return sku_list
 

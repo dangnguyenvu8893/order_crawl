@@ -307,11 +307,28 @@ class TransformerVipo:
                 0
             )
             
-            sku_list.append({
+            # ✅ NEW: Extract skuId từ sku_item (Taobao SKU ID)
+            # Ưu tiên: spec_id (theo user: "trong Json sẽ là spec_id") > sku_id > skuId > id
+            # spec_id và sku_id thường giống nhau, nhưng spec_id là field chính xác hơn trong VIPO raw data
+            sku_id = (
+                sku_item.get('spec_id') or  # ✅ Ưu tiên spec_id (theo user: "trong Json sẽ là spec_id")
+                sku_item.get('sku_id') or 
+                sku_item.get('skuId') or 
+                sku_item.get('id') or 
+                None
+            )
+            
+            sku_entry = {
                 'canBookCount': str(stock),
                 'price': str(price),
                 'specAttrs': spec_attrs
-            })
+            }
+            
+            # ✅ Thêm skuId nếu có
+            if sku_id:
+                sku_entry['skuId'] = str(sku_id)
+            
+            sku_list.append(sku_entry)
         
         return sku_list
 
@@ -616,8 +633,10 @@ class TransformerVipo:
         elif 'status' in api_result:
             # Case 1: Có status key
             logger.info("Transformer Vipo: Detected status key (Case 1)")
-            if api_result.get('status') != 'success':
-                logger.error(f"Transformer Vipo: API status không phải 'success': {api_result.get('status')}")
+            # ✅ FIX: Vipo API trả về status="01" cho success, không phải "success"
+            status = api_result.get('status')
+            if status not in ['success', '01']:  # ✅ Accept cả "success" và "01"
+                logger.error(f"Transformer Vipo: API status không phải 'success' hoặc '01': {status}")
                 logger.error(f"API result: {api_result}")
                 return {}
             data = api_result.get('data', {})
