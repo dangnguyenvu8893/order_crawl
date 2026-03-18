@@ -2508,6 +2508,102 @@ def route_parse_pugo():
         logger.error(f"Parser error: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ==================== PANDAMALL.VN ENDPOINTS ====================
+
+@app.route('/pandamall-session-info', methods=['GET'])
+def pandamall_session_info():
+    """Lấy thông tin session pandamall.vn hiện tại"""
+    try:
+        from py_extractors.extractor_pandamall import ExtractorPandamall
+        extractor = ExtractorPandamall()
+        session_info = extractor.get_session_info()
+
+        return jsonify({
+            "status": "success",
+            "session_info": session_info
+        })
+    except Exception as e:
+        logger.error(f"Lỗi khi lấy thông tin session pandamall: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/pandamall-clear-session', methods=['POST'])
+def pandamall_clear_session():
+    """Xóa session pandamall.vn hiện tại"""
+    try:
+        from py_extractors.extractor_pandamall import ExtractorPandamall
+        extractor = ExtractorPandamall()
+        extractor.clear_session()
+
+        return jsonify({
+            "status": "success",
+            "message": "Đã xóa session và cookies pandamall"
+        })
+    except Exception as e:
+        logger.error(f"Lỗi khi xóa session pandamall: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@swag_from({
+    'tags': ['extractor'],
+    'summary': 'Extractor Pandamall.vn (raw) - lấy dữ liệu thô qua Selenium + CDP',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=1024618738333'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Raw extractor output', 'schema': {'type': 'object'}}}
+})
+@app.route('/extract-pandamall', methods=['POST'])
+def route_extract_pandamall():
+    try:
+        from py_extractors.extractor_pandamall import extractor_pandamall
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        result = extractor_pandamall.extract(url)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Extractor pandamall error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Pandamall.vn từ URL (tự động extract + transform)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=1024618738333'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-pandamall-from-url', methods=['POST'])
+def route_transform_pandamall_from_url():
+    try:
+        from py_extractors.extractor_pandamall import extractor_pandamall
+        from py_transformers.transformer_pandamall import transformer_pandamall
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        raw = extractor_pandamall.extract(url)
+        transformed = transformer_pandamall.transform(raw)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer pandamall error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # ==================== VIPO.VN ENDPOINTS ====================
 
 @swag_from({
