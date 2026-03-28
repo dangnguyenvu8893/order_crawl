@@ -1,41 +1,23 @@
 services:
   crawler-service:
-    build: 
-      context: .
-      platforms:
-        - linux/amd64
-    platform: linux/amd64
+    build: .
     container_name: order-management-crawler
+    init: true
     ports:
-      - "5001:5001"
+      - "127.0.0.1:5001:5001"
     environment:
       - FLASK_ENV=production
-      - PYTHONUNBUFFERED=1
-      - DISPLAY=:99
-      - CHROME_BIN=/usr/bin/google-chrome
-      - CHROME_PATH=/usr/bin/google-chrome
-      - CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
-    volumes:
-      - pugo_sessions:/app/logs/sessions
-    shm_size: 2g
-    ulimits:
-      nofile:
-        soft: 65536
-        hard: 65536
+      - BACKEND_API_URL=http://order_management_backend:3000/api
+    shm_size: '1gb'
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
-      - crawler-network
-
-volumes:
-  pugo_sessions:
-    driver: local
+      - order_management_network
 
 networks:
-  crawler-network:
-    driver: bridge
+  order_management_network:
+    external: true
+    name: orders_backend_order_management_network
