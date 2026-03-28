@@ -2738,4 +2738,12 @@ def route_transform_vipo_from_url():
 
 
 if __name__ == '__main__':
+    # Warm-up Pandamall browser singleton trước khi nhận request
+    # (~7.6s startup, sau đó warm requests ~1.5s thay vì cold ~13s)
+    try:
+        from py_extractors.extractor_pandamall import extractor_pandamall as _panda
+        _panda.initialize()
+    except Exception as _e:
+        logger.warning(f"Pandamall warm-up failed (sẽ lazy-init): {_e}")
+
     app.run(host='0.0.0.0', port=5001, debug=True)
