@@ -1,4 +1,8 @@
+import logging
 from typing import Any, Dict, List, Optional
+
+
+logger = logging.getLogger(__name__)
 
 
 class TransformerGianghuy:
@@ -40,7 +44,7 @@ class TransformerGianghuy:
 
         source_type = raw.get("sourceType", "taobao")
         source_id   = str(product.get("itemId", raw.get("sourceId", "")))
-        sku_props   = self._extract_sku_props(product)
+        sku_props   = self._extract_sku_props(product, source_type)
         sku_list    = self._extract_sku_list(product)
 
         # Build canonical URL từ sourceId — tránh URL tracking params dài vượt VARCHAR(255)
@@ -165,7 +169,22 @@ class TransformerGianghuy:
     # SKU Properties
     # ------------------------------------------------------------------
 
-    def _extract_sku_props(self, product: Dict) -> List[Dict]:
+    def _normalize_numeric_identifier(self, value: Any) -> Optional[str]:
+        """
+        Chuẩn hoá identifier về contract nội bộ hiện tại của backend:
+        - Chỉ giữ các ID numeric (fit BIGINT hiện tại)
+        - UUID / string lạ / rỗng => null
+        """
+        if value is None:
+            return None
+
+        text = str(value).strip()
+        if not text or not text.isdigit():
+            return None
+
+        return text
+
+    def _extract_sku_props(self, product: Dict, source_type: str) -> List[Dict]:
         """
         properties[] → skuProperty format chuẩn.
         Dùng name (tiếng Trung) — KHÔNG dùng nameTranslate.
@@ -173,23 +192,53 @@ class TransformerGianghuy:
         """
         props = product.get("properties") or []
         result = []
+        dropped_property_ids = 0
+        dropped_value_ids = 0
+
         for prop in props:
             if not isinstance(prop, dict):
                 continue
+
+            raw_property_id = prop.get("id", "")
+            source_property_id = str(raw_property_id)
+            if source_type == "1688":
+                normalized_property_id = self._normalize_numeric_identifier(raw_property_id)
+                if raw_property_id not in (None, "") and normalized_property_id is None:
+                    dropped_property_ids += 1
+                source_property_id = normalized_property_id
+
             values = []
             for v in (prop.get("values") or []):
                 if not isinstance(v, dict):
                     continue
+
+                raw_value_id = v.get("id", "")
+                source_value_id = str(raw_value_id)
+                if source_type == "1688":
+                    normalized_value_id = self._normalize_numeric_identifier(raw_value_id)
+                    if raw_value_id not in (None, "") and normalized_value_id is None:
+                        dropped_value_ids += 1
+                    source_value_id = normalized_value_id
+
                 values.append({
                     "name":          v.get("name", ""),
-                    "sourceValueId": str(v.get("id", "")),
+                    "sourceValueId": source_value_id,
                     "image":         v.get("imageUrl") or None,
                 })
             result.append({
                 "name":             prop.get("name", ""),
-                "sourcePropertyId": str(prop.get("id", "")),
+                "sourcePropertyId": source_property_id,
                 "values":           values,
             })
+
+        if source_type == "1688" and (dropped_property_ids > 0 or dropped_value_ids > 0):
+            logger.warning(
+                "[Gianghuy Transformer] 1688 adapter dropped non-numeric source IDs: "
+                "sourcePropertyId=%s, sourceValueId=%s",
+                dropped_property_ids,
+                dropped_value_ids,
+            )
+
         return result
 
     # ------------------------------------------------------------------
