@@ -8,6 +8,7 @@ from product_orchestrator import (
     _adapt_hangve,
     _adapt_pandamall,
     parse_product_url,
+    serialize_legacy_product,
     transform_product_from_url,
 )
 
@@ -172,6 +173,7 @@ class ProductOrchestratorTests(unittest.TestCase):
     def test_adapt_gianghuy_maps_legacy_shape_inputs(self):
         context = parse_product_url('https://detail.1688.com/offer/892407994374.html?offerId=892407994374')
         canonical = _adapt_gianghuy(GIANGHUY_1688_BRIDGE, context)
+        legacy = serialize_legacy_product(canonical)
 
         self.assertEqual(canonical['sourceId'], '892407994374')
         self.assertEqual(canonical['name'], 'GiangHuy 1688 title')
@@ -179,10 +181,14 @@ class ProductOrchestratorTests(unittest.TestCase):
         self.assertEqual(len(canonical['variantGroups']), 1)
         self.assertEqual(len(canonical['skus']), 1)
         self.assertEqual(len(canonical['priceRanges']), 2)
+        self.assertEqual(legacy['skuProperty'][0]['sourcePropertyId'], '')
+        self.assertEqual(legacy['skuProperty'][0]['values'][0]['sourceValueId'], '')
+        self.assertEqual(legacy['sku'][0]['skuId'], 'sku-1688-1')
 
     def test_adapt_pandamall_parses_price_ranges_and_specs(self):
         context = parse_product_url('https://item.taobao.com/item.htm?id=1016154115457&skuId=6025255024005')
         canonical = _adapt_pandamall(PANDAMALL_TAOBAO_BRIDGE, context)
+        legacy = serialize_legacy_product(canonical)
 
         self.assertEqual(canonical['sourceId'], '1016154115457')
         self.assertEqual(canonical['name'], 'Pandamall Taobao title')
@@ -190,6 +196,9 @@ class ProductOrchestratorTests(unittest.TestCase):
         self.assertEqual(len(canonical['variantGroups']), 2)
         self.assertEqual(canonical['skus'][0]['classification'], 'Milkshake White - Còn hàng|S')
         self.assertEqual(len(canonical['priceRanges']), 2)
+        self.assertEqual(legacy['skuProperty'][0]['values'][0]['sourcePropertyId'], '1627207')
+        self.assertEqual(legacy['skuProperty'][0]['values'][0]['sourceValueId'], '380848629')
+        self.assertEqual(legacy['sku'][0]['skuId'], '6025255024005')
 
     def test_adapt_hangve_preserves_input_marketplace_identity(self):
         context = parse_product_url('https://detail.tmall.com/item.htm?id=1013307248141&skuId=6179390398393')

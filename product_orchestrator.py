@@ -524,6 +524,7 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
         if not isinstance(prop, dict):
             continue
 
+        prop_id = _normalize_string(prop.get('id'))
         values = []
         for item in prop.get('values', []):
             if not isinstance(item, dict):
@@ -531,17 +532,23 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
 
             name = _normalize_string(_first_non_empty(item.get('nameTranslate'), item.get('name')))
             image = _normalize_string(item.get('imageUrl'))
+            value_id = _normalize_string(item.get('id'))
             if not name:
                 continue
 
             value_payload = {'name': name}
             if image:
                 value_payload['image'] = image
+            value_payload['sourceValueId'] = value_id
             values.append(value_payload)
 
         group_name = _normalize_string(_first_non_empty(prop.get('nameTranslate'), prop.get('name')))
         if group_name and values:
-            variant_groups.append({'name': group_name, 'values': values})
+            variant_groups.append({
+                'name': group_name,
+                'sourcePropertyId': prop_id,
+                'values': values,
+            })
 
     skus = []
     for sku in raw.get('skuInfos', []):
@@ -622,7 +629,11 @@ def _adapt_pandamall(bridge_response: Dict[str, Any], context: Dict[str, str]) -
             if not value_name:
                 continue
 
-            value_payload = {'name': value_name}
+            value_payload = {
+                'name': value_name,
+                'sourcePropertyId': prop_id,
+                'sourceValueId': value_id,
+            }
             image = _normalize_string(sku_images.get(f'{prop_id}:{value_id}'))
             if image:
                 value_payload['image'] = image
@@ -768,11 +779,15 @@ def serialize_legacy_product(canonical: Dict[str, Any]) -> Dict[str, Any]:
 
     sku_list = []
     for sku in canonical.get('skus', []):
-        sku_list.append({
+        sku_payload = {
             'canBookCount': _normalize_string(sku.get('quantity')),
             'price': _format_price_string(_first_non_empty(sku.get('promotionPrice'), sku.get('price'))),
             'specAttrs': _normalize_spec_attrs(sku.get('classification')),
-        })
+        }
+        sku_id = _normalize_string(sku.get('skuId'))
+        if sku_id:
+            sku_payload['skuId'] = sku_id
+        sku_list.append(sku_payload)
 
     return {
         'images': canonical.get('images', []),
