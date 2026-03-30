@@ -4,6 +4,7 @@ import time
 import logging
 import os
 import pickle
+import shutil
 import threading
 import uuid
 import concurrent.futures
@@ -16,6 +17,15 @@ from utils.url_resolver import resolve_product_url
 
 # Setup logger trước khi import selenium
 logger = logging.getLogger(__name__)
+
+# Import undetected-chromedriver (bypass Cloudflare bot protection)
+try:
+    import undetected_chromedriver as uc  # type: ignore
+    UC_AVAILABLE = True
+except ImportError:
+    uc = None
+    UC_AVAILABLE = False
+    logger.warning("undetected-chromedriver không khả dụng — fallback sang selenium thường")
 
 # Import Selenium với error handling
 try:
@@ -41,7 +51,7 @@ class ExtractorPandamall:
     MAX_REQUESTS = 100  # restart Chrome sau N requests (memory management)
 
     def __init__(self) -> None:
-        self.login_url = "https://pandamall.vn/login"
+        self.login_url = "https://pandamall.vn/login?next=%2Faccount"
         self.api_intercept_path = "/api/pandamall/v1/item/details"
         self.email = "binhnguyendn1403@gmail.com"
         self.password = "Dom@21731823"
@@ -284,69 +294,82 @@ class ExtractorPandamall:
 
     def _spawn_browser(self) -> None:
         """
-        Spawn Chrome mới với:
-        - unique user-data-dir (uuid) để tránh lock file conflict sau crash
-        - Block images/fonts để giảm CDP buffer pressure (+4s improvement)
-        - CDP buffer 100MB
+        Spawn Chrome với undetected-chromedriver để bypass Cloudflare Bot Protection.
+        - CDP Network commands (block images/fonts, buffer) được setup SAU khi login xong
+          (tránh CDP fingerprint bị Cloudflare detect trong lúc fresh login)
+        - Performance logging capability giữ nguyên (cần cho API interception)
         """
         if not SELENIUM_AVAILABLE:
             raise Exception("Selenium chưa được cài đặt trong môi trường chạy")
 
         uid = uuid.uuid4().hex[:8]
-        chrome_options = Options()
+
+        if UC_AVAILABLE:
+            chrome_options = uc.ChromeOptions()
+        else:
+            chrome_options = Options()
+
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument(
-            "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_argument("--enable-logging")
         chrome_options.add_argument("--log-level=0")
         chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        chrome_options.add_experimental_option('useAutomationExtension', False)
-        chrome_options.add_argument("--headless")
         chrome_options.add_argument(f"--user-data-dir=/tmp/chrome-panda-{uid}")
         chrome_options.add_argument("--remote-debugging-port=0")
 
         try:
-            driver = webdriver.Chrome(options=chrome_options)
-        except Exception as e:
-            logger.warning(f"Chrome driver failed: {e}, trying Chromium...")
-            try:
+            if UC_AVAILABLE:
+                # Copy chromedriver sang /tmp để uc có quyền patch binary
+                # (appuser không có write access vào /usr/bin/)
+                tmp_driver = f"/tmp/chromedriver-uc-{uid}"
+                shutil.copy2("/usr/bin/chromedriver", tmp_driver)
+                os.chmod(tmp_driver, 0o755)
+                # headless=False — Chrome dùng Xvfb display (:99) thay vì headless
+                # Cloudflare không thể phân biệt với real browser khi có virtual display
+                driver = uc.Chrome(
+                    options=chrome_options,
+                    driver_executable_path=tmp_driver,
+                    browser_executable_path="/usr/bin/chromium",
+                    headless=False,
+                )
+                logger.info("✅ Chrome spawned via undetected-chromedriver")
+            else:
                 chrome_options.binary_location = "/usr/bin/chromium"
-                driver = webdriver.Chrome(options=chrome_options)
-            except Exception as e2:
-                logger.error(f"Chromium also failed: {e2}")
-                try:
-                    service = Service(executable_path="/usr/bin/chromedriver")
-                    chrome_options.binary_location = "/usr/bin/chromium"
-                    driver = webdriver.Chrome(service=service, options=chrome_options)
-                except Exception as e3:
-                    raise Exception(f"Không thể khởi tạo browser: {e3}")
-
-        # CDP: tăng buffer lên 100MB để giảm -32000 trên decimal requestId
-        driver.execute_cdp_cmd('Network.enable', {
-            'maxTotalBufferSize': 100 * 1024 * 1024,
-            'maxResourceBufferSize': 50 * 1024 * 1024,
-        })
-
-        # Block images/fonts: giảm network noise, response body stay trong buffer lâu hơn
-        driver.execute_cdp_cmd('Network.setBlockedURLs', {
-            'urls': [
-                '*.png', '*.jpg', '*.jpeg', '*.gif', '*.svg', '*.ico', '*.webp',
-                '*.woff', '*.woff2', '*.ttf', '*.eot',
-            ]
-        })
-
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                service = Service(executable_path="/usr/bin/chromedriver")
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                driver.execute_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                )
+                logger.info("✅ Chrome spawned via selenium (fallback)")
+        except Exception as e:
+            raise Exception(f"Không thể khởi tạo browser: {e}")
 
         self._driver = driver
         self._request_count = 0
-        logger.info(f"✅ Chrome spawned (user-data-dir: chrome-panda-{uid})")
+        logger.info(f"user-data-dir: chrome-panda-{uid}")
+
+    def _setup_network_cdp(self) -> None:
+        """
+        Setup CDP Network sau khi đã qua Cloudflare (login xong, đang ở /account/).
+        - CDP commands KHÔNG được gọi lúc spawn vì Cloudflare có thể detect CDP fingerprint
+        - Gọi method này 1 lần trước _call_pandamall_api_selenium()
+        """
+        try:
+            self._driver.execute_cdp_cmd('Network.enable', {
+                'maxTotalBufferSize': 100 * 1024 * 1024,
+                'maxResourceBufferSize': 50 * 1024 * 1024,
+            })
+            self._driver.execute_cdp_cmd('Network.setBlockedURLs', {
+                'urls': [
+                    '*.png', '*.jpg', '*.jpeg', '*.gif', '*.svg', '*.ico', '*.webp',
+                    '*.woff', '*.woff2', '*.ttf', '*.eot',
+                ]
+            })
+            logger.info("✅ CDP Network setup (buffer 100MB, images blocked)")
+        except Exception as e:
+            logger.warning(f"⚠️ CDP Network setup failed (non-critical): {e}")
 
     def _restore_session(self) -> bool:
         """
@@ -464,6 +487,12 @@ class ExtractorPandamall:
 
             self._spawn_browser()
             if not self._restore_session():
+                # Set _driver = None để request tiếp theo trigger re-init thay vì dùng broken state
+                try:
+                    self._driver.quit()
+                except Exception:
+                    pass
+                self._driver = None
                 raise Exception("Không thể khôi phục session pandamall sau khi spawn browser mới")
 
     def _navigate_to_search(self) -> None:
@@ -645,6 +674,7 @@ class ExtractorPandamall:
         try:
             self._ensure_browser()
             self._navigate_to_search()
+            self._setup_network_cdp()
             api_result = self._call_pandamall_api_selenium(final_url)
             self._request_count += 1
 

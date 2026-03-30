@@ -294,7 +294,11 @@ class TransformerPandamall:
         Tương thích với schema mà backend ProductService expects.
         """
         if not raw or 'raw_data' not in raw:
-            return {}
+            return {
+                'status': 'error',
+                'message': raw.get('message', 'Extract failed — no raw_data') if raw else 'Empty response from extractor',
+                'sourceType': raw.get('sourceType', 'pandamall') if raw else 'pandamall',
+            }
 
         data = raw['raw_data']
 

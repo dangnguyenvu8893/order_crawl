@@ -30,6 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xdg-utils \
     unzip \
     apt-transport-https \
+    xvfb \
+    xauth \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -129,4 +131,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5001/health || exit 1
 
 # Command để chạy ứng dụng
-CMD ["python", "app.py"]
+# xvfb-run tạo virtual display :99 → Chrome chạy non-headless, bypass Cloudflare bot detection
+CMD ["xvfb-run", "--server-num=99", "--server-args=-screen 0 1920x1080x24 -ac", "python", "app.py"]

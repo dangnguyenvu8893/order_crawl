@@ -2318,6 +2318,101 @@ def route_transform_nhaphangchina_from_url():
         return jsonify({'error': str(e)}), 500
 
 @swag_from({
+    'tags': ['extractor'],
+    'summary': 'Extract Gianghuy (raw data)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://detail.1688.com/offer/962800347100.html'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Raw extractor output', 'schema': {'type': 'object'}}}
+})
+@app.route('/extract-gianghuy', methods=['POST'])
+def route_extract_gianghuy():
+    try:
+        from py_extractors.extractor_gianghuy import extractor_gianghuy
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        result = extractor_gianghuy.extract(url)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Extractor gianghuy error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Gianghuy (chuẩn hoá từ raw_data)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'raw_data': {'type': 'object'}
+            },
+            'required': ['raw_data']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-gianghuy', methods=['POST'])
+def route_transform_gianghuy():
+    try:
+        from py_transformers.transformer_gianghuy import transformer_gianghuy
+        payload = request.get_json() or {}
+        if isinstance(payload, dict) and 'raw_data' in payload:
+            raw_input = payload
+        elif isinstance(payload, dict) and 'status' in payload:
+            raw_input = {'raw_data': payload}
+        else:
+            return jsonify({'error': 'Body phải là {"raw_data": {...}} hoặc JSON có key "status"'}), 400
+        transformed = transformer_gianghuy.transform(raw_input)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer gianghuy error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform Gianghuy từ URL (extract + transform)',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://item.taobao.com/item.htm?id=1016154115457'}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-gianghuy-from-url', methods=['POST'])
+def route_transform_gianghuy_from_url():
+    try:
+        from py_extractors.extractor_gianghuy import extractor_gianghuy
+        from py_transformers.transformer_gianghuy import transformer_gianghuy
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+        raw = extractor_gianghuy.extract(url)
+        transformed = transformer_gianghuy.transform(raw)
+        return jsonify(transformed)
+    except Exception as e:
+        logger.error(f"Transformer gianghuy from-url error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@swag_from({
     'tags': ['parser'],
     'summary': 'Parse Nhaphangchina response (HTML/JSON)',
     'consumes': ['application/json'],
@@ -2544,6 +2639,90 @@ def pandamall_clear_session():
 
 @swag_from({
     'tags': ['extractor'],
+    'summary': 'Inject session pandamall từ real browser (bypass Cloudflare)',
+    'description': (
+        'Nhận cookie_string + local_storage từ DevTools của browser thực trên pandamall.vn. '
+        'Lưu vào volume để dùng lại qua các lần restart container (7 ngày TTL).'
+    ),
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'cookie_string': {'type': 'string', 'description': 'document.cookie string từ browser'},
+                'local_storage': {'type': 'string', 'description': 'JSON.stringify(localStorage) từ browser'},
+            },
+            'required': ['cookie_string', 'local_storage']
+        }
+    }],
+    'responses': {200: {'description': 'Session saved', 'schema': {'type': 'object'}}}
+})
+@app.route('/pandamall-inject-session', methods=['POST'])
+def pandamall_inject_session():
+    """Inject cookies + localStorage từ real browser để bypass Cloudflare."""
+    try:
+        from py_extractors.extractor_pandamall import extractor_pandamall
+        import json as _json
+
+        data = request.get_json() or {}
+        cookie_string = data.get('cookie_string', '')
+        local_storage = data.get('local_storage', '{}')
+
+        if not cookie_string:
+            return jsonify({'error': 'cookie_string is required'}), 400
+
+        # Convert document.cookie string → Selenium cookie dicts
+        selenium_cookies = []
+        for part in cookie_string.split(';'):
+            part = part.strip()
+            if '=' in part:
+                name, _, value = part.partition('=')
+                selenium_cookies.append({
+                    'name': name.strip(),
+                    'value': value.strip(),
+                    'domain': '.pandamall.vn',
+                    'path': '/',
+                })
+
+        extractor_pandamall.save_cookies(selenium_cookies)
+        extractor_pandamall.save_session({
+            'cookie_string': cookie_string,
+            'local_storage': local_storage,
+            'login_time': __import__('time').time(),
+            'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        })
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Đã lưu session ({len(selenium_cookies)} cookies). Có hiệu lực 7 ngày.',
+            'cookies_saved': len(selenium_cookies),
+        })
+    except Exception as e:
+        logger.error(f"Lỗi inject session pandamall: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/pandamall-selenium-login', methods=['POST'])
+def pandamall_selenium_login():
+    """Trigger Selenium fresh login → lưu session.pkl để extractor_pandamall_direct dùng."""
+    try:
+        from py_extractors.extractor_pandamall import extractor_pandamall
+        ok = extractor_pandamall._ensure_browser()
+        session = extractor_pandamall.load_session()
+        return jsonify({
+            'status': 'success' if ok else 'error',
+            'session_valid': extractor_pandamall.is_session_valid(),
+            'message': 'Login thành công — session đã lưu' if ok else 'Login thất bại',
+            'expires_at': session.get('expires_at', 0) if session else 0,
+        })
+    except Exception as e:
+        logger.error(f"Selenium login error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@swag_from({
+    'tags': ['extractor'],
     'summary': 'Extractor Pandamall.vn (raw) - lấy dữ liệu thô qua Selenium + CDP',
     'consumes': ['application/json'],
     'parameters': [{
@@ -2561,12 +2740,12 @@ def pandamall_clear_session():
 @app.route('/extract-pandamall', methods=['POST'])
 def route_extract_pandamall():
     try:
-        from py_extractors.extractor_pandamall import extractor_pandamall
+        from py_extractors.extractor_pandamall_direct import extractor_pandamall_direct
         data = request.get_json() or {}
         url = data.get('url')
         if not url:
             return jsonify({'error': 'url is required'}), 400
-        result = extractor_pandamall.extract(url)
+        result = extractor_pandamall_direct.extract(url)
         return jsonify(result)
     except Exception as e:
         logger.error(f"Extractor pandamall error: {e}")
@@ -2591,13 +2770,13 @@ def route_extract_pandamall():
 @app.route('/transform-pandamall-from-url', methods=['POST'])
 def route_transform_pandamall_from_url():
     try:
-        from py_extractors.extractor_pandamall import extractor_pandamall
+        from py_extractors.extractor_pandamall_direct import extractor_pandamall_direct
         from py_transformers.transformer_pandamall import transformer_pandamall
         data = request.get_json() or {}
         url = data.get('url')
         if not url:
             return jsonify({'error': 'url is required'}), 400
-        raw = extractor_pandamall.extract(url)
+        raw = extractor_pandamall_direct.extract(url)
         transformed = transformer_pandamall.transform(raw)
         return jsonify(transformed)
     except Exception as e:
@@ -2738,12 +2917,4 @@ def route_transform_vipo_from_url():
 
 
 if __name__ == '__main__':
-    # Warm-up Pandamall browser singleton trước khi nhận request
-    # (~7.6s startup, sau đó warm requests ~1.5s thay vì cold ~13s)
-    try:
-        from py_extractors.extractor_pandamall import extractor_pandamall as _panda
-        _panda.initialize()
-    except Exception as _e:
-        logger.warning(f"Pandamall warm-up failed (sẽ lazy-init): {_e}")
-
     app.run(host='0.0.0.0', port=5001, debug=True)

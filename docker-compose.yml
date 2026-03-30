@@ -8,16 +8,24 @@ services:
     environment:
       - FLASK_ENV=production
       - BACKEND_API_URL=http://order_management_backend:3000/api
-    shm_size: '1gb'
+      - DISPLAY=:99
+      - CHROME_BIN=/usr/bin/google-chrome
+      - CHROME_PATH=/usr/bin/google-chrome
+      - CHROMEDRIVER_PATH=/usr/bin/chromedriver
+    shm_size: '2gb'
     deploy:
       resources:
         limits:
-          memory: 1.5G
+          memory: 3G
     restart: unless-stopped
+    volumes:
+      - pandamall_sessions:/app/logs/sessions
     networks:
-      - order_management_network
+      - crawler-network
 
 networks:
-  order_management_network:
-    external: true
-    name: orders_backend_order_management_network
+  crawler-network:
+    driver: bridge
+
+volumes:
+  pandamall_sessions:
