@@ -1,7 +1,5 @@
-# Sử dụng Python 3.11 slim image
 FROM python:3.11-slim as base
 
-# Cài đặt các dependencies cần thiết cho Selenium
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -28,16 +26,15 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     unzip \
     gpg \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
-# Tạo thư mục làm việc
 WORKDIR /app
 
-# Copy requirements và cài đặt Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY order_crawl/requirements.txt /app/order_crawl/requirements.txt
+RUN pip install --no-cache-dir -r /app/order_crawl/requirements.txt
 
-# Cài đặt Chrome cho Selenium (multi-arch support)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
         wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg && \
@@ -45,13 +42,11 @@ RUN ARCH=$(dpkg --print-architecture) && \
         apt-get update && \
         apt-get install -y google-chrome-stable; \
     else \
-        # For ARM64, use Chromium instead
         apt-get update && \
         apt-get install -y chromium chromium-driver; \
     fi && \
     rm -rf /var/lib/apt/lists/*
 
-# Cài đặt ChromeDriver (nếu cần)
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
         CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1-3) && \
@@ -61,31 +56,26 @@ RUN ARCH=$(dpkg --print-architecture) && \
         chmod +x /usr/local/bin/chromedriver && \
         rm /tmp/chromedriver.zip; \
     else \
-        # Chromium driver đã được cài đặt cùng với chromium package \
         echo "Chromium driver already installed"; \
     fi
 
-# Tạo user không phải root và thư mục home
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
-# Copy source code
-COPY . .
+COPY order_crawl /app/order_crawl
+COPY crawl_new /app/crawl_new
 
-# Tạo thư mục để lưu logs
-RUN mkdir -p /app/logs
+RUN mkdir -p /app/logs /app/order_crawl/logs && \
+    chown -R appuser:appuser /app
 
-# Thay đổi ownership của tất cả files
-RUN chown -R appuser:appuser /app
+WORKDIR /app/order_crawl
 
-# Chuyển sang user appuser
 USER appuser
 
-# Expose port khớp với Flask app (5001)
+ENV CRAWL_NEW_DIR=/app/crawl_new
+
 EXPOSE 5001
 
-# Health check khớp cổng 5001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5001/health || exit 1
 
-# Command để chạy ứng dụng
 CMD ["python", "app.py"]

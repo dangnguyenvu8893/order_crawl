@@ -2,13 +2,16 @@ version: '3.8'
 
 services:
   crawler-service:
-    build: .
+    build:
+      context: ..
+      dockerfile: order_crawl/Dockerfile
     container_name: order-management-crawler
     ports:
       - "5001:5001"
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+      - CRAWL_NEW_DIR=/app/crawl_new
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped

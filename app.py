@@ -9,6 +9,7 @@ import random
 import pickle
 from parser_1688 import parser_1688
 from parser_pugo import parser_pugo
+from product_orchestrator import parse_product_url, transform_product_from_url
 
 app = Flask(__name__)
 # Cấu hình Swagger: tắt nút "Try it out" bằng cách vô hiệu hoá submit methods
@@ -43,6 +44,32 @@ swagger = Swagger(app, config={
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def parse_request_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    return bool(value)
+
+
+def run_orchestrated_transform(url: str, debug: bool = False, expected_marketplace: str = ''):
+    try:
+        parsed = parse_product_url(url)
+    except ValueError as exc:
+        return {'error': str(exc)}, 400
+
+    if expected_marketplace and parsed['marketplace'] != expected_marketplace:
+        return {
+            'error': f'URL marketplace "{parsed["marketplace"]}" không khớp với endpoint "{expected_marketplace}"'
+        }, 400
+
+    result = transform_product_from_url(url, debug=debug)
+    if result.get('error'):
+        return result, 502
+
+    return result, 200
 
 # Lưu trữ cookies và sessions
 COOKIES_FILE = "1688_cookies.pkl"
@@ -486,15 +513,16 @@ def route_transform_1688():
 @app.route('/transform-1688-from-url', methods=['POST'])
 def route_transform_1688_from_url():
     try:
-        from py_extractors.extractor_1688 import extractor_1688
-        from py_transformers.transformer_1688 import transformer_1688
         data = request.get_json() or {}
         url = data.get('url')
         if not url:
             return jsonify({'error': 'url is required'}), 400
-        raw = extractor_1688.extract(url)
-        transformed = transformer_1688.transform(raw)
-        return jsonify(transformed)
+        transformed, status_code = run_orchestrated_transform(
+            url=url,
+            debug=parse_request_bool(data.get('debug')),
+            expected_marketplace='1688',
+        )
+        return jsonify(transformed), status_code
     except Exception as e:
         logger.error(f"Transformer error: {e}")
         return jsonify({'error': str(e)}), 500
@@ -624,15 +652,53 @@ def route_transform_pugo():
 @app.route('/transform-pugo-from-url', methods=['POST'])
 def route_transform_pugo_from_url():
     try:
-        from py_extractors.extractor_pugo import extractor_pugo
-        from py_transformers.transformer_pugo import transformer_pugo
         data = request.get_json() or {}
         url = data.get('url')
         if not url:
             return jsonify({'error': 'url is required'}), 400
-        raw = extractor_pugo.extract(url)
-        transformed = transformer_pugo.transform(raw)
-        return jsonify(transformed)
+        transformed, status_code = run_orchestrated_transform(
+            url=url,
+            debug=parse_request_bool(data.get('debug')),
+        )
+        return jsonify(transformed), status_code
+    except Exception as e:
+        logger.error(f"Transformer error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@swag_from({
+    'tags': ['transformer'],
+    'summary': 'Transform product từ URL với fallback theo marketplace',
+    'consumes': ['application/json'],
+    'parameters': [{
+        'in': 'body', 'name': 'body',
+        'schema': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'string', 'example': 'https://detail.1688.com/offer/892407994374.html?offerId=892407994374&hotSaleSkuId=5758935680751'},
+                'debug': {'type': 'boolean', 'example': False}
+            },
+            'required': ['url']
+        }
+    }],
+    'responses': {200: {'description': 'Transformed output', 'schema': {'type': 'object'}}}
+})
+@app.route('/transform-product-from-url', methods=['POST'])
+def route_transform_product_from_url():
+    try:
+        data = request.get_json() or {}
+        url = data.get('url')
+        if not url:
+            return jsonify({'error': 'url is required'}), 400
+
+        transformed, status_code = run_orchestrated_transform(
+            url=url,
+            debug=parse_request_bool(data.get('debug')),
+        )
+        return jsonify(transformed), status_code
+    except ValueError as e:
+        logger.error(f"Transformer validation error: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         logger.error(f"Transformer error: {e}")
         return jsonify({'error': str(e)}), 500
