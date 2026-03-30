@@ -93,7 +93,6 @@ RUN ARCH=$(dpkg --print-architecture) && \
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 COPY order_crawl /app/order_crawl
-COPY crawl_new /app/crawl_new
 
 RUN mkdir -p /app/logs /app/logs/sessions /app/order_crawl/logs && \
     chown -R appuser:appuser /app
@@ -104,7 +103,7 @@ ENV DISPLAY=:99
 ENV CHROME_BIN=/usr/bin/google-chrome
 ENV CHROME_PATH=/usr/bin/google-chrome
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
-ENV CRAWL_NEW_DIR=/app/crawl_new
+ENV CRAWL_NEW_DIR=/app/order_crawl/crawl_new
 
 USER appuser
 

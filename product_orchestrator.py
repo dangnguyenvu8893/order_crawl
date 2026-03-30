@@ -242,6 +242,10 @@ def _get_crawl_new_dir() -> str:
         return configured
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
+    local_dir = os.path.join(base_dir, 'crawl_new')
+    if os.path.isdir(local_dir):
+        return local_dir
+
     sibling_dir = os.path.abspath(os.path.join(base_dir, '..', 'crawl_new'))
     return sibling_dir
 

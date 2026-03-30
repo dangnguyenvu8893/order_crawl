@@ -15,7 +15,7 @@ services:
       - CHROME_BIN=/usr/bin/google-chrome
       - CHROME_PATH=/usr/bin/google-chrome
       - CHROMEDRIVER_PATH=/usr/bin/chromedriver
-      - CRAWL_NEW_DIR=/app/crawl_new
+      - CRAWL_NEW_DIR=/app/order_crawl/crawl_new
     shm_size: '2gb'
     deploy:
       resources:
