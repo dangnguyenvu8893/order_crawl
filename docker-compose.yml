@@ -1,9 +1,8 @@
 services:
   crawler-service:
     build:
-      context: ..
-      # Thư mục package trên disk là order_managerment_crawl (không phải order_crawl — tên remote repo có thể khác)
-      dockerfile: order_managerment_crawl/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     container_name: order-management-crawler
     init: true
     ports:
