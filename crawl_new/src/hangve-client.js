@@ -167,7 +167,112 @@ function normalizeHangveIdentifier(value) {
   return /^\d+$/.test(normalized) ? normalized : "";
 }
 
-function buildHangveSkuPropertyMetadata(skuList) {
+function buildHangvePropertyImageMap(rawData = {}) {
+  const imageMap = new Map();
+
+  const propertyImageListConvert =
+    rawData?.propertyImageListConvert && typeof rawData.propertyImageListConvert === "object"
+      ? rawData.propertyImageListConvert
+      : {};
+
+  for (const [key, value] of Object.entries(propertyImageListConvert)) {
+    const imageUrl = getHangveFirstString(value);
+    if (key && imageUrl) {
+      imageMap.set(String(key), imageUrl);
+    }
+  }
+
+  const propertyImageList = Array.isArray(rawData?.propertyImageList) ? rawData.propertyImageList : [];
+  for (const item of propertyImageList) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const imageUrl = getHangveFirstString(item.imageUrl, item.picUrl, item.url);
+    const properties = getHangveFirstString(item.properties);
+    if (!imageUrl || !properties) {
+      continue;
+    }
+
+    const parts = properties.split(":").map((segment) => segment.trim()).filter(Boolean);
+    const valueKey = parts[parts.length - 1];
+    if (valueKey) {
+      imageMap.set(valueKey, imageUrl);
+    }
+  }
+
+  return imageMap;
+}
+
+function buildHangveSkuMetadata(skuList) {
+  const metadata = new Map();
+
+  if (!Array.isArray(skuList)) {
+    return metadata;
+  }
+
+  for (const sku of skuList) {
+    if (!sku || typeof sku !== "object") {
+      continue;
+    }
+
+    const keys = [
+      getHangveFirstString(sku.skuId, sku.sku_id),
+      getHangveFirstString(sku.mpSkuId, sku.mp_sku_id)
+    ].filter(Boolean);
+
+    if (keys.length === 0) {
+      continue;
+    }
+
+    const properties = Array.isArray(sku.properties) ? sku.properties : [];
+    const classificationCnParts = [];
+    const classificationParts = [];
+
+    for (const property of properties) {
+      if (!property || typeof property !== "object") {
+        continue;
+      }
+
+      const rawLabel = getHangveFirstString(
+        property.rawValueNameCn,
+        property.rawValueName,
+        property.valueName
+      );
+      const fallbackLabel = getHangveFirstString(
+        property.valueName,
+        property.valueDesc,
+        property.rawValueName,
+        property.rawValueNameCn
+      );
+
+      if (rawLabel) {
+        classificationCnParts.push(rawLabel);
+      }
+
+      if (fallbackLabel) {
+        classificationParts.push(fallbackLabel);
+      }
+    }
+
+    const entry = {
+      classificationCn: classificationCnParts.join(";"),
+      classification: classificationParts.join(";"),
+      image: getHangveFirstString(sku.picUrl, sku.pic_url),
+      quantity: normalizeHangveNumber(sku.quantity),
+      price: normalizeHangveNumber(sku.price),
+      promotionPrice: normalizeHangveNumber(sku.promotionPrice ?? sku.promotion_price)
+    };
+
+    for (const key of keys) {
+      metadata.set(key, entry);
+    }
+  }
+
+  return metadata;
+}
+
+function buildHangveSkuPropertyMetadata(skuList, propertyImageMap = new Map()) {
   if (!Array.isArray(skuList)) {
     return [];
   }
@@ -204,12 +309,14 @@ function buildHangveSkuPropertyMetadata(skuList) {
 
       const targetGroup = groups.get(groupKey);
       const sourceValueId = normalizeHangveIdentifier(property.valueId ?? property.value_id);
+      const rawValueKey = getHangveFirstString(property.valueId, property.value_id);
       const entry = {
-        name: getHangveFirstString(property.valueName, property.rawValueName, property.rawValueNameCn),
+        name: getHangveFirstString(property.rawValueNameCn, property.rawValueName, property.valueName),
         nameOriginal: getHangveFirstString(property.rawValueName, property.valueName, property.rawValueNameCn),
         nameOriginalCn: getHangveFirstString(property.rawValueNameCn, property.rawValueName, property.valueName),
         sourcePropertyId,
-        sourceValueId
+        sourceValueId,
+        image: getHangveFirstString(sku.picUrl, sku.pic_url, propertyImageMap.get(rawValueKey))
       };
 
       if (!entry.name && !entry.nameOriginal && !entry.nameOriginalCn) {
@@ -318,8 +425,19 @@ function normalizeHangveVariantGroups(groups, metadataGroups = []) {
         return null;
       }
 
-      const name = getHangveFirstString(group.prop_name, group.prop_name_original);
-      const nameOriginal = getHangveFirstString(group.prop_name_original, group.prop_name);
+      const metadataGroup = resolveHangveVariantMetadataGroup(group, metadataGroups);
+      const name = getHangveFirstString(
+        metadataGroup?.nameOriginal,
+        group.prop_name_original,
+        metadataGroup?.name,
+        group.prop_name
+      );
+      const nameOriginal = getHangveFirstString(
+        group.prop_name_original,
+        metadataGroup?.nameOriginal,
+        group.prop_name,
+        metadataGroup?.name
+      );
       const values = uniqueHangveStrings(normalizeHangveStringArray(group.prop_values));
       const valuesOriginal = uniqueHangveStrings(normalizeHangveStringArray(group.prop_values_original));
       const valuesOriginalCn = uniqueHangveStrings(normalizeHangveStringArray(group.prop_values_original_cn));
@@ -328,7 +446,6 @@ function normalizeHangveVariantGroups(groups, metadataGroups = []) {
         return null;
       }
 
-      const metadataGroup = resolveHangveVariantMetadataGroup(group, metadataGroups);
       const valueEntries = [];
 
       if (metadataGroup?.valueEntries?.length) {
@@ -352,7 +469,8 @@ function normalizeHangveVariantGroups(groups, metadataGroups = []) {
             nameOriginal: metadataEntry.nameOriginal,
             nameOriginalCn: metadataEntry.nameOriginalCn,
             sourcePropertyId: metadataEntry.sourcePropertyId,
-            sourceValueId: metadataEntry.sourceValueId
+            sourceValueId: metadataEntry.sourceValueId,
+            image: metadataEntry.image
           });
         }
       }
@@ -370,7 +488,7 @@ function normalizeHangveVariantGroups(groups, metadataGroups = []) {
     .filter(Boolean);
 }
 
-function normalizeHangveSkus(details) {
+function normalizeHangveSkus(details, skuMetadata = new Map()) {
   if (!Array.isArray(details)) {
     return [];
   }
@@ -382,13 +500,26 @@ function normalizeHangveSkus(details) {
       }
 
       const skuId = getHangveFirstString(detail.sku_id, detail.mp_sku_id, detail.skuId, detail.mpSkuId);
-      const classification = getHangveFirstString(detail.classification, detail.classification_cn);
-      const classificationCn = getHangveFirstString(detail.classification_cn, detail.classification);
-      const quantity = normalizeHangveNumber(detail.quantity);
-      const price = normalizeHangveNumber(detail.price);
-      const promotionPrice = normalizeHangveNumber(detail.promotionPrice ?? detail.promotion_price);
+      const metadata = skuMetadata.get(skuId) ?? {};
+      const classification = getHangveFirstString(
+        metadata.classificationCn,
+        detail.classification_cn,
+        metadata.classification,
+        detail.classification
+      );
+      const classificationCn = getHangveFirstString(
+        detail.classification_cn,
+        metadata.classificationCn,
+        detail.classification,
+        metadata.classification
+      );
+      const quantity = normalizeHangveNumber(detail.quantity ?? metadata.quantity);
+      const price = normalizeHangveNumber(detail.price ?? metadata.price);
+      const promotionPrice = normalizeHangveNumber(
+        detail.promotionPrice ?? detail.promotion_price ?? metadata.promotionPrice
+      );
       const postFee = normalizeHangveNumber(detail.post_fee ?? detail.postFee);
-      const image = getHangveFirstString(detail.pic_url, detail.picUrl);
+      const image = getHangveFirstString(detail.pic_url, detail.picUrl, metadata.image);
 
       if (!skuId && !classification && quantity === undefined && price === undefined && !image) {
         return null;
@@ -471,6 +602,51 @@ function normalizeHangvePriceRanges(priceRanges) {
     .filter(Boolean);
 }
 
+function buildHangveFallbackPriceRanges({ priceRanges = [], skus = [], detailPayload = {}, buyderData = {}, item = {} } = {}) {
+  if (Array.isArray(priceRanges) && priceRanges.length > 0) {
+    return priceRanges;
+  }
+
+  const candidatePrices = [];
+
+  for (const sku of skus) {
+    if (!sku || typeof sku !== "object") {
+      continue;
+    }
+
+    const price = normalizeHangveNumber(sku.promotionPrice ?? sku.price);
+    if (price !== undefined && price > 0) {
+      candidatePrices.push(price);
+    }
+  }
+
+  for (const value of [
+    detailPayload.promotion_price,
+    detailPayload.price,
+    buyderData.promotionPrice,
+    buyderData.price,
+    item.promotion_price,
+    item.price
+  ]) {
+    const price = normalizeHangveNumber(value);
+    if (price !== undefined && price > 0) {
+      candidatePrices.push(price);
+    }
+  }
+
+  if (candidatePrices.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      minQuantity: 1,
+      maxQuantity: undefined,
+      price: Math.min(...candidatePrices)
+    }
+  ];
+}
+
 function normalizeHangveItemDetailPayload(detailPayload = {}) {
   const normalizedDetailPayload =
     detailPayload && typeof detailPayload === "object" ? detailPayload : {};
@@ -479,8 +655,10 @@ function normalizeHangveItemDetailPayload(detailPayload = {}) {
   const parsedData = parseHangveJsonValue(normalizedDetailPayload.data);
   const parsedItem =
     parsedData?.item && typeof parsedData.item === "object" ? parsedData.item : {};
-  const skuPropertyMetadata = buildHangveSkuPropertyMetadata(parsedBuyderData?.skuList);
-  const priceRanges = normalizeHangvePriceRanges(
+  const propertyImageMap = buildHangvePropertyImageMap(parsedBuyderData);
+  const skuPropertyMetadata = buildHangveSkuPropertyMetadata(parsedBuyderData?.skuList, propertyImageMap);
+  const skuMetadata = buildHangveSkuMetadata(parsedBuyderData?.skuList ?? parsedItem?.properties);
+  const parsedPriceRanges = normalizeHangvePriceRanges(
     parsedBuyderData?.priceRangeList ??
       parsedBuyderData?.price_ranges ??
       parsedBuyderData?.sku_price_ranges ??
@@ -494,7 +672,14 @@ function normalizeHangveItemDetailPayload(detailPayload = {}) {
     getHangveFirstString(normalizedDetailPayload.pic, parsedItem.pic)
   ]);
   const variantGroups = normalizeHangveVariantGroups(parsedSkuProperties?.properties, skuPropertyMetadata);
-  const skus = normalizeHangveSkus(parsedSkuProperties?.details);
+  const skus = normalizeHangveSkus(parsedSkuProperties?.details, skuMetadata);
+  const priceRanges = buildHangveFallbackPriceRanges({
+    priceRanges: parsedPriceRanges,
+    skus,
+    detailPayload: normalizedDetailPayload,
+    buyderData: parsedBuyderData,
+    item: parsedItem
+  });
   const attributes = normalizeHangveAttributes(parsedItem.properties);
   const descriptionHtml = getHangveFirstString(
     parsedBuyderData?.description,

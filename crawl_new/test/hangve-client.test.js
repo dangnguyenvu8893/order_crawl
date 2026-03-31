@@ -299,3 +299,151 @@ test("normalizeHangveItemDetailPayload enriches property ids conservatively from
   assert.equal(normalized.variantGroups[1].sourcePropertyId, "450");
   assert.equal(normalized.variantGroups[1].valueEntries[0].sourceValueId, "450");
 });
+
+test("normalizeHangveItemDetailPayload prefers raw single-property labels and images for tmall detail", () => {
+  const normalized = normalizeHangveItemDetailPayload({
+    id: 2508971,
+    source: "taobao",
+    num_iid: "1013307248141",
+    title: "2026款蜡笔小新汽车屏幕摆件植绒小新车内饰品中控屏幕装饰发财",
+    price: 31.03,
+    promotion_price: 31.03,
+    seller_nick: "路途汽车用品专营店",
+    detail_url: "https://item.taobao.com/item.htm?id=1013307248141",
+    buyder_data: JSON.stringify({
+      itemId: "1013307248141",
+      itemUrl: "https://item.taobao.com/item.htm?id=1013307248141",
+      title: "2026款蜡笔小新汽车屏幕摆件植绒小新车内饰品中控屏幕装饰发财",
+      price: 30.49,
+      promotionPrice: 30.49,
+      picUrls: [
+        "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01OiPrVd1USq10kwR2E_!!4611686018427387173-0-item_pic.jpg"
+      ],
+      propertyImageListConvert: {
+        "-1": "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01js2efM1USq0ybj8Cn_!!1850932517.jpg",
+        "-2": "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01L3MdRb1USq0yuZLHN_!!1850932517.jpg"
+      },
+      skuList: [
+        {
+          picUrl: "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01js2efM1USq0ybj8Cn_!!1850932517.jpg",
+          quantity: 200,
+          price: 30.49,
+          promotionPrice: 30.49,
+          skuId: "6179390398388",
+          mpSkuId: "6179390398388",
+          properties: [
+            {
+              valueId: -1,
+              valueName: "红色蜡笔小新+元宝来财",
+              propId: -1,
+              propName: "商品规格"
+            }
+          ]
+        },
+        {
+          picUrl: "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01L3MdRb1USq0yuZLHN_!!1850932517.jpg",
+          quantity: 200,
+          price: 30.49,
+          promotionPrice: 30.49,
+          skuId: "6179390398389",
+          mpSkuId: "6179390398389",
+          properties: [
+            {
+              valueId: -2,
+              valueName: "红色蜡笔小新+来财",
+              propId: -1,
+              propName: "商品规格"
+            }
+          ]
+        }
+      ]
+    }),
+    sku_properties: JSON.stringify({
+      properties: [
+        {
+          prop_name: "Thông số sản phẩm",
+          prop_name_original: "商品规格",
+          prop_values: ["Thông số sản phẩm", "Bút chì màu đỏ Shin-chan + Tài lộc may mắn"],
+          prop_values_original: ["Thông số sản phẩm", "Bút chì màu đỏ Shin-chan + Tài lộc may mắn"],
+          prop_values_original_cn: ["红色蜡笔小新+元宝来财", "红色蜡笔小新+来财"]
+        }
+      ],
+      details: [
+        {
+          classification: "Thông số sản phẩm",
+          classification_cn: "红色蜡笔小新+元宝来财",
+          quantity: 200,
+          price: 30.49,
+          promotionPrice: 30.49,
+          pic_url: "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01js2efM1USq0ybj8Cn_!!1850932517.jpg",
+          mp_sku_id: "6179390398388",
+          sku_id: "6179390398388"
+        },
+        {
+          classification: "Bút chì màu đỏ Shin-chan + Tài lộc may mắn",
+          classification_cn: "红色蜡笔小新+来财",
+          quantity: 200,
+          price: 30.49,
+          promotionPrice: 30.49,
+          pic_url: "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01L3MdRb1USq0yuZLHN_!!1850932517.jpg",
+          mp_sku_id: "6179390398389",
+          sku_id: "6179390398389"
+        }
+      ]
+    }),
+    data: {
+      item: {
+        num_iid: "1013307248141",
+        detail_url: "https://item.taobao.com/item.htm?id=1013307248141",
+        images: [
+          "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01OiPrVd1USq10kwR2E_!!4611686018427387173-0-item_pic.jpg"
+        ],
+        properties: [
+          {
+            quantity: 200,
+            price: 3049,
+            skuId: "6179390398388",
+            promotionPrice: 3049,
+            picUrl: "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01js2efM1USq0ybj8Cn_!!1850932517.jpg",
+            properties: [
+              {
+                valueId: -1,
+                valueName: "红色蜡笔小新+元宝来财",
+                propId: -1,
+                propName: "商品规格"
+              }
+            ]
+          },
+          {
+            quantity: 200,
+            price: 3049,
+            skuId: "6179390398389",
+            promotionPrice: 3049,
+            picUrl: "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01L3MdRb1USq0yuZLHN_!!1850932517.jpg",
+            properties: [
+              {
+                valueId: -2,
+                valueName: "红色蜡笔小新+来财",
+                propId: -1,
+                propName: "商品规格"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  });
+
+  assert.equal(normalized.variantGroups[0].name, "商品规格");
+  assert.equal(normalized.variantGroups[0].sourcePropertyId, "");
+  assert.equal(normalized.variantGroups[0].valueEntries[0].name, "红色蜡笔小新+元宝来财");
+  assert.equal(normalized.variantGroups[0].valueEntries[0].sourceValueId, "");
+  assert.equal(
+    normalized.variantGroups[0].valueEntries[0].image,
+    "https://img.alicdn.com/bao/uploaded/i4/1850932517/O1CN01js2efM1USq0ybj8Cn_!!1850932517.jpg"
+  );
+  assert.equal(normalized.skus[0].classification, "红色蜡笔小新+元宝来财");
+  assert.equal(normalized.skus[1].classification, "红色蜡笔小新+来财");
+  assert.equal(normalized.priceRangeCount, 1);
+  assert.equal(normalized.priceRanges[0].price, 30.49);
+});
