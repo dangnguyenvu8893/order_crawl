@@ -35,6 +35,18 @@ Credential duoc luu tai:
 config/gianghuy.credentials.json
 ```
 
+Orchestrator moi doc them:
+
+```txt
+config/pandamall.credentials.json
+config/pandamall.accounts.json
+config/hangve.credentials.json
+config/hangve.accounts.json
+```
+
+- `*.credentials.json`: account mac dinh cho CLI/client direct.
+- `*.accounts.json`: danh sach account rotation cho `product_orchestrator.py`.
+
 ## Chay nhanh
 
 ```bash

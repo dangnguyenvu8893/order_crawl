@@ -10,6 +10,67 @@ from urllib.parse import parse_qs, urlparse
 
 logger = logging.getLogger(__name__)
 
+
+def _resolve_crawl_new_dir() -> str:
+    configured = str(os.environ.get('CRAWL_NEW_DIR') or '').strip()
+    if configured:
+        return configured
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    local_dir = os.path.join(base_dir, 'crawl_new')
+    if os.path.isdir(local_dir):
+        return local_dir
+
+    return os.path.abspath(os.path.join(base_dir, '..', 'crawl_new'))
+
+
+def _resolve_crawl_new_config_path(filename: str) -> str:
+    return os.path.join(_resolve_crawl_new_dir(), 'config', filename)
+
+
+def _load_optional_json(path: str) -> Any:
+    try:
+        with open(path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return None
+
+
+def _normalize_account_entries(raw_accounts: Any, user_key: str) -> List[Dict[str, str]]:
+    if isinstance(raw_accounts, dict):
+        raw_accounts = raw_accounts.get('accounts')
+
+    if not isinstance(raw_accounts, list):
+        return []
+
+    normalized_accounts: List[Dict[str, str]] = []
+    for account in raw_accounts:
+        if not isinstance(account, dict):
+            continue
+
+        username = str(account.get(user_key) or '').strip()
+        password = str(account.get('password') or '').strip()
+        if not username or not password:
+            continue
+
+        normalized_accounts.append({
+            user_key: username,
+            'password': password,
+        })
+
+    return normalized_accounts
+
+
+def _load_provider_accounts(filename: str, user_key: str, fallback_accounts: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    configured_accounts = _normalize_account_entries(
+        _load_optional_json(_resolve_crawl_new_config_path(filename)),
+        user_key,
+    )
+    if configured_accounts:
+        return configured_accounts
+
+    return _normalize_account_entries(fallback_accounts, user_key)
+
 PROVIDER_CHAINS = {
     '1688': [
         {'provider': 'gianghuy', 'action': 'gianghuy_1688_detail'},
@@ -33,7 +94,7 @@ PROVIDER_TIMEOUTS_MS = {
     'hangve': int(os.environ.get('CRAWL_HANGVE_TIMEOUT_MS', '25000')),
 }
 
-HANGVE_ACCOUNTS = [
+_DEFAULT_HANGVE_ACCOUNTS = [
     {'username': '0905687687', 'password': '687687687'},
     {'username': '0905252513', 'password': '0905252513'},
     {'username': '0909521903', 'password': '0909521903'},
@@ -41,11 +102,23 @@ HANGVE_ACCOUNTS = [
     {'username': '0808131313', 'password': '0808131313'},
 ]
 
-PANDAMALL_ACCOUNTS = [
+_DEFAULT_PANDAMALL_ACCOUNTS = [
     {'phone': '0905687687', 'password': 'Abc@0905687687'},
     {'phone': '0905252513', 'password': 'Abc@0905252513'},
     {'phone': '0909521903', 'password': 'Abc@0909521903'},
 ]
+
+HANGVE_ACCOUNTS = _load_provider_accounts(
+    'hangve.accounts.json',
+    'username',
+    _DEFAULT_HANGVE_ACCOUNTS,
+)
+
+PANDAMALL_ACCOUNTS = _load_provider_accounts(
+    'pandamall.accounts.json',
+    'phone',
+    _DEFAULT_PANDAMALL_ACCOUNTS,
+)
 
 HANGVE_MAX_ACCOUNT_ATTEMPTS = 3
 PANDAMALL_MAX_ACCOUNT_ATTEMPTS = 3
@@ -255,17 +328,7 @@ def parse_product_url(url: str) -> Dict[str, str]:
 
 
 def _get_crawl_new_dir() -> str:
-    configured = _normalize_string(os.environ.get('CRAWL_NEW_DIR'))
-    if configured:
-        return configured
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    local_dir = os.path.join(base_dir, 'crawl_new')
-    if os.path.isdir(local_dir):
-        return local_dir
-
-    sibling_dir = os.path.abspath(os.path.join(base_dir, '..', 'crawl_new'))
-    return sibling_dir
+    return _resolve_crawl_new_dir()
 
 
 def _get_bridge_script_path() -> str:
@@ -1050,14 +1113,14 @@ def _adapt_hangve(bridge_response: Dict[str, Any], context: Dict[str, str]) -> D
         if not isinstance(group, dict):
             continue
 
-        group_name = _normalize_string(_first_non_empty(group.get('name'), group.get('nameOriginal')))
+        group_name = _normalize_string(_first_non_empty(group.get('nameOriginal'), group.get('name')))
         values = []
 
         for entry in group.get('valueEntries', []):
             if not isinstance(entry, dict):
                 continue
 
-            value_name = _normalize_string(_first_non_empty(entry.get('name'), entry.get('nameOriginal'), entry.get('nameOriginalCn')))
+            value_name = _normalize_string(_first_non_empty(entry.get('nameOriginalCn'), entry.get('nameOriginal'), entry.get('name')))
             if not value_name:
                 continue
 
@@ -1066,6 +1129,9 @@ def _adapt_hangve(bridge_response: Dict[str, Any], context: Dict[str, str]) -> D
                 'sourcePropertyId': _normalize_string(_first_non_empty(entry.get('sourcePropertyId'), group.get('sourcePropertyId'))) or None,
                 'sourceValueId': _normalize_string(entry.get('sourceValueId')) or None,
             }
+            image = _normalize_string(entry.get('image'))
+            if image:
+                value_payload['image'] = image
             values.append(value_payload)
 
         if not values:
@@ -1184,9 +1250,14 @@ def _build_provider_payload(
 ) -> Dict[str, Any]:
     payload = {
         'marketplace': context['marketplace'],
-        'url': context['canonicalUrl'],
         'itemId': context['itemId'],
+        'productUrl': context['canonicalUrl'],
     }
+
+    # GiangHuy dùng field config.url để ký sign với host nhaphang.gianghuy.com.
+    # Không được override bằng canonical product URL của marketplace.
+    if provider != 'gianghuy':
+        payload['url'] = context['canonicalUrl']
 
     if provider == 'pandamall':
         payload['provider'] = 'alibaba' if context['marketplace'] == '1688' else 'taobao'

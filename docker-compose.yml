@@ -25,6 +25,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
+      - ./crawl_new/config:/app/order_crawl/crawl_new/config:ro
       - pandamall_sessions:/app/logs/sessions
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]

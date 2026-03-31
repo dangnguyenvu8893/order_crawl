@@ -192,6 +192,9 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Local orchestrator credentials
+crawl_new/config/*.json
+
 
 # Docs moved to /docs (centralized)
 EXTENSION_PRICE_MATCHING_ANALYSIS.md
