@@ -88,6 +88,24 @@ def _normalize_string(value: Any) -> str:
     return str(value).strip()
 
 
+def _normalize_numeric_identifier(value: Any) -> Optional[str]:
+    normalized = _normalize_string(value)
+    if not normalized or not re.fullmatch(r'\d+', normalized):
+        return None
+    return normalized
+
+
+def _normalize_source_identifier_for_marketplace(value: Any, marketplace: str) -> Optional[str]:
+    normalized = _normalize_string(value)
+    if not normalized:
+        return None
+
+    if marketplace == '1688':
+        return _normalize_numeric_identifier(normalized)
+
+    return normalized
+
+
 def _coerce_float(value: Any) -> Optional[float]:
     if value in (None, ''):
         return None
@@ -410,6 +428,26 @@ def _normalize_spec_attrs(value: Any) -> str:
     return '|'.join(parts)
 
 
+def _serialize_spec_attrs_for_backend(value: Any) -> str:
+    normalized = _normalize_spec_attrs(value)
+    if not normalized:
+        return ''
+
+    parts = []
+    for segment in normalized.split('|'):
+        current = _normalize_string(segment)
+        if not current:
+            continue
+
+        if '--' in current:
+            current = _normalize_string(current.split('--', 1)[1])
+
+        if current:
+            parts.append(current)
+
+    return '|'.join(parts)
+
+
 def _normalize_pandamall_spec_attrs(value: Any) -> str:
     text = _normalize_string(value)
     if not text:
@@ -429,6 +467,287 @@ def _normalize_pandamall_spec_attrs(value: Any) -> str:
             parts.append(current)
 
     return '|'.join(parts)
+
+
+def _build_gianghuy_spec_attrs(value: Any, prop_names: List[str]) -> str:
+    text = _normalize_string(value)
+    if not text:
+        return ''
+
+    value_parts = [segment.strip() for segment in text.split(';') if segment.strip()]
+    if prop_names and len(prop_names) == len(value_parts):
+        return '|'.join(f'{prop}--{segment}' for prop, segment in zip(prop_names, value_parts))
+
+    return '|'.join(value_parts)
+
+
+def _get_nested_value(data: Any, path: str) -> Any:
+    current = data
+    for segment in path.split('.'):
+        if isinstance(current, dict) and segment in current:
+            current = current[segment]
+            continue
+        return None
+    return current
+
+
+def _extract_pandamall_images(product: Dict[str, Any]) -> List[str]:
+    images: List[str] = []
+
+    for thumb in product.get('thumbnails', []):
+        if isinstance(thumb, dict):
+            src = _normalize_string(thumb.get('src'))
+            if src:
+                images.append(src)
+        elif isinstance(thumb, str):
+            src = _normalize_string(thumb)
+            if src:
+                images.append(src)
+
+    if not images:
+        for path in ('images', 'imageList', 'gallery', 'photos', 'imgs', 'data.images', 'item.images', 'product.images'):
+            images_data = _get_nested_value(product, path)
+            if not isinstance(images_data, list) or not images_data:
+                continue
+
+            for item in images_data:
+                if isinstance(item, dict):
+                    for key in ('url', 'imageUrl', 'src', 'image'):
+                        candidate = _normalize_string(item.get(key))
+                        if candidate:
+                            images.append(candidate)
+                            break
+                elif isinstance(item, str):
+                    candidate = _normalize_string(item)
+                    if candidate:
+                        images.append(candidate)
+
+            if images:
+                break
+
+    main_image = _normalize_string(_first_non_empty(product.get('image'), _get_nested_value(product, 'data.image')))
+    if main_image:
+        images.insert(0, main_image)
+
+    return _dedupe_strings(images)
+
+
+def _extract_pandamall_name(product: Dict[str, Any]) -> str:
+    for path in ('name', 'title', 'productName', 'itemName', 'data.title', 'data.name', 'item.title', 'item.name'):
+        candidate = _normalize_string(_get_nested_value(product, path) if '.' in path else product.get(path))
+        if candidate:
+            return candidate
+    return ''
+
+
+def _build_pandamall_value_name_map(classify: Dict[str, Any]) -> Dict[str, str]:
+    value_name_map: Dict[str, str] = {}
+
+    for prop in classify.get('skuProperties', []):
+        if not isinstance(prop, dict):
+            continue
+
+        prop_id = _normalize_string(_first_non_empty(prop.get('propID'), prop.get('propId')))
+        if not prop_id:
+            continue
+
+        for value in prop.get('propValues', []) or prop.get('values', []):
+            if not isinstance(value, dict):
+                continue
+
+            value_id = _normalize_string(_first_non_empty(value.get('valueID'), value.get('valueId')))
+            value_name = _normalize_string(_first_non_empty(value.get('valueName'), value.get('name')))
+            if prop_id and value_id and value_name:
+                value_name_map[f'{prop_id}:{value_id}'] = value_name
+
+    return value_name_map
+
+
+def _build_pandamall_spec_attrs(raw_value: Any, mapping_key: str, value_name_map: Dict[str, str]) -> str:
+    preferred = _normalize_pandamall_spec_attrs(raw_value)
+    if preferred:
+        return preferred
+
+    parts: List[str] = []
+    for segment in mapping_key.split('@'):
+        normalized_segment = _normalize_string(segment)
+        if not normalized_segment:
+            continue
+        parts.append(_normalize_string(value_name_map.get(normalized_segment) or normalized_segment))
+
+    return '|'.join(part for part in parts if part)
+
+
+def _extract_pandamall_range_prices(product: Dict[str, Any], sku_mappings: Dict[str, Any]) -> List[Dict[str, Any]]:
+    price_ranges = _parse_pandamall_price_ranges(product.get('priceRanges'))
+    if price_ranges:
+        return price_ranges
+
+    nested_price_ranges: List[Dict[str, Any]] = []
+    prices: List[float] = []
+
+    for sku_value in sku_mappings.values():
+        if not isinstance(sku_value, dict):
+            continue
+
+        if isinstance(sku_value.get('priceRanges'), dict):
+            nested_price_ranges.extend(_parse_pandamall_price_ranges(sku_value.get('priceRanges')))
+
+        price = _coerce_float(_first_non_empty(sku_value.get('promotionPrice'), sku_value.get('price')))
+        if price is not None and price > 0:
+            prices.append(price)
+
+    if nested_price_ranges:
+        return _normalize_range_list(nested_price_ranges)
+
+    if prices:
+        min_price = min(prices)
+        return [{
+            'minQuantity': 1,
+            'maxQuantity': 999999,
+            'price': min_price,
+        }]
+
+    fallback_price = _coerce_float(_first_non_empty(
+        product.get('price'),
+        product.get('minPrice'),
+        product.get('startPrice'),
+        _get_nested_value(product, 'data.price'),
+    ))
+    if fallback_price is None or fallback_price <= 0:
+        return []
+
+    return [{
+        'minQuantity': 1,
+        'maxQuantity': 999999,
+        'price': fallback_price,
+    }]
+
+
+def _merge_images(base: List[str], incoming: List[str]) -> bool:
+    merged = _dedupe_strings((base or []) + (incoming or []))
+    if merged == (base or []):
+        return False
+    base[:] = merged
+    return True
+
+
+def _merge_variant_groups(base: List[Dict[str, Any]], incoming: List[Dict[str, Any]]) -> bool:
+    if not incoming:
+        return False
+
+    if not base:
+        base.extend(incoming)
+        return True
+
+    changed = False
+    group_index = {
+        _normalize_string(group.get('name')).lower(): group
+        for group in base
+        if isinstance(group, dict) and _normalize_string(group.get('name'))
+    }
+
+    for incoming_group in incoming:
+        if not isinstance(incoming_group, dict):
+            continue
+
+        group_key = _normalize_string(incoming_group.get('name')).lower()
+        if not group_key:
+            continue
+
+        existing_group = group_index.get(group_key)
+        if not existing_group:
+            base.append(incoming_group)
+            group_index[group_key] = incoming_group
+            changed = True
+            continue
+
+        if not _normalize_string(existing_group.get('sourcePropertyId')) and _normalize_string(incoming_group.get('sourcePropertyId')):
+            existing_group['sourcePropertyId'] = incoming_group.get('sourcePropertyId')
+            changed = True
+
+        existing_values = existing_group.get('values') or []
+        value_index = {
+            _normalize_string(value.get('name')).lower(): value
+            for value in existing_values
+            if isinstance(value, dict) and _normalize_string(value.get('name'))
+        }
+
+        for incoming_value in incoming_group.get('values', []):
+            if not isinstance(incoming_value, dict):
+                continue
+
+            value_key = _normalize_string(incoming_value.get('name')).lower()
+            if not value_key:
+                continue
+
+            existing_value = value_index.get(value_key)
+            if not existing_value:
+                existing_values.append(incoming_value)
+                value_index[value_key] = incoming_value
+                changed = True
+                continue
+
+            for field in ('image', 'sourcePropertyId', 'sourceValueId'):
+                if not _normalize_string(existing_value.get(field)) and _normalize_string(incoming_value.get(field)):
+                    existing_value[field] = incoming_value.get(field)
+                    changed = True
+
+        existing_group['values'] = existing_values
+
+    return changed
+
+
+def _merge_skus(base: List[Dict[str, Any]], incoming: List[Dict[str, Any]]) -> bool:
+    if not incoming:
+        return False
+
+    if not base:
+        base.extend(incoming)
+        return True
+
+    changed = False
+    sku_index: Dict[str, Dict[str, Any]] = {}
+    for sku in base:
+        if not isinstance(sku, dict):
+            continue
+        key = _normalize_string(_first_non_empty(sku.get('skuId'), sku.get('classification'))).lower()
+        if key:
+            sku_index[key] = sku
+
+    for incoming_sku in incoming:
+        if not isinstance(incoming_sku, dict):
+            continue
+
+        key = _normalize_string(_first_non_empty(incoming_sku.get('skuId'), incoming_sku.get('classification'))).lower()
+        if not key:
+            continue
+
+        existing_sku = sku_index.get(key)
+        if not existing_sku:
+            base.append(incoming_sku)
+            sku_index[key] = incoming_sku
+            changed = True
+            continue
+
+        for field in ('skuId', 'quantity', 'price', 'promotionPrice', 'image'):
+            if existing_sku.get(field) in (None, '') and incoming_sku.get(field) not in (None, ''):
+                existing_sku[field] = incoming_sku.get(field)
+                changed = True
+
+        existing_classification = _normalize_string(existing_sku.get('classification'))
+        incoming_classification = _normalize_string(incoming_sku.get('classification'))
+        if (
+            incoming_classification
+            and (
+                not existing_classification
+                or ('--' in incoming_classification and '--' not in existing_classification)
+            )
+        ):
+            existing_sku['classification'] = incoming_sku.get('classification')
+            changed = True
+
+    return changed
 
 
 def _pick_price_signal(canonical: Dict[str, Any]) -> bool:
@@ -490,14 +809,33 @@ def _merge_canonical(base: Dict[str, Any], incoming: Dict[str, Any]) -> List[str
             base[key] = incoming.get(key)
             updated_fields.append(key)
 
-    for key in ('images', 'variantGroups', 'skus', 'priceRanges'):
-        if not base.get(key) and incoming.get(key):
-            base[key] = incoming.get(key)
-            updated_fields.append(key)
+    if _merge_images(base.setdefault('images', []), incoming.get('images') or []):
+        updated_fields.append('images')
 
-    if not base.get('seller') and incoming.get('seller'):
-        base['seller'] = incoming.get('seller')
-        updated_fields.append('seller')
+    if _merge_variant_groups(base.setdefault('variantGroups', []), incoming.get('variantGroups') or []):
+        updated_fields.append('variantGroups')
+
+    if _merge_skus(base.setdefault('skus', []), incoming.get('skus') or []):
+        updated_fields.append('skus')
+
+    incoming_price_ranges = incoming.get('priceRanges') or []
+    if incoming_price_ranges and (
+        not base.get('priceRanges')
+        or len(incoming_price_ranges) > len(base.get('priceRanges') or [])
+    ):
+        base['priceRanges'] = incoming_price_ranges
+        updated_fields.append('priceRanges')
+
+    if incoming.get('seller'):
+        seller = base.setdefault('seller', {})
+        seller_changed = False
+        for field in ('name', 'id', 'url'):
+            if not _normalize_string(seller.get(field)) and _normalize_string(incoming.get('seller', {}).get(field)):
+                seller[field] = incoming['seller'].get(field)
+                seller_changed = True
+        if seller_changed:
+            base['seller'] = seller
+            updated_fields.append('seller')
 
     if not _normalize_string(base.get('sourceId')) and _normalize_string(incoming.get('sourceId')):
         base['sourceId'] = incoming.get('sourceId')
@@ -528,15 +866,15 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
         if not isinstance(prop, dict):
             continue
 
-        prop_id = _normalize_string(prop.get('id'))
+        prop_id = _normalize_source_identifier_for_marketplace(prop.get('id'), context['marketplace'])
         values = []
         for item in prop.get('values', []):
             if not isinstance(item, dict):
                 continue
 
-            name = _normalize_string(_first_non_empty(item.get('nameTranslate'), item.get('name')))
+            name = _normalize_string(item.get('name'))
             image = _normalize_string(item.get('imageUrl'))
-            value_id = _normalize_string(item.get('id'))
+            value_id = _normalize_source_identifier_for_marketplace(item.get('id'), context['marketplace'])
             if not name:
                 continue
 
@@ -546,7 +884,7 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
             value_payload['sourceValueId'] = value_id
             values.append(value_payload)
 
-        group_name = _normalize_string(_first_non_empty(prop.get('nameTranslate'), prop.get('name')))
+        group_name = _normalize_string(prop.get('name'))
         if group_name and values:
             variant_groups.append({
                 'name': group_name,
@@ -555,6 +893,11 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
             })
 
     skus = []
+    prop_names = [
+        _normalize_string(prop.get('name'))
+        for prop in raw.get('properties', [])
+        if isinstance(prop, dict) and _normalize_string(prop.get('name'))
+    ]
     for sku in raw.get('skuInfos', []):
         if not isinstance(sku, dict):
             continue
@@ -562,7 +905,7 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
         image_urls = _normalize_string(sku.get('imageUrls')).split('|')
         skus.append({
             'skuId': _normalize_string(_first_non_empty(sku.get('id'), sku.get('skuId'))),
-            'classification': _normalize_spec_attrs(_first_non_empty(sku.get('skuPropertyNameTranslate'), sku.get('skuPropertyName'))),
+            'classification': _build_gianghuy_spec_attrs(sku.get('skuPropertyName'), prop_names),
             'quantity': _coerce_int(_first_non_empty(sku.get('amountOnSale'), sku.get('quantity'))),
             'price': _coerce_float(sku.get('price')),
             'promotionPrice': _coerce_float(sku.get('promotionPrice')),
@@ -585,7 +928,7 @@ def _adapt_gianghuy(bridge_response: Dict[str, Any], context: Dict[str, str]) ->
         'sourceId': _normalize_string(_first_non_empty(context.get('itemId'), raw.get('itemId'))),
         'inputUrl': context['inputUrl'],
         'resolvedUrl': context['canonicalUrl'],
-        'name': _normalize_string(_first_non_empty(raw.get('titleTranslate'), raw.get('title'), raw.get('name'))),
+        'name': _normalize_string(_first_non_empty(raw.get('title'), raw.get('name'), raw.get('titleTranslate'))),
         'images': images,
         'variantGroups': variant_groups,
         'skus': [sku for sku in skus if sku.get('classification') or sku.get('skuId')],
@@ -608,28 +951,24 @@ def _adapt_pandamall(bridge_response: Dict[str, Any], context: Dict[str, str]) -
     product = raw.get('data') if isinstance(raw.get('data'), dict) else {}
     classify = product.get('classify') if isinstance(product.get('classify'), dict) else {}
     sku_images = classify.get('skuImages') if isinstance(classify.get('skuImages'), dict) else {}
-
-    images = []
-    if product.get('image'):
-        images.append(product.get('image'))
-
-    for thumb in product.get('thumbnails', []):
-        if isinstance(thumb, dict) and thumb.get('type') == 'image':
-            images.append(thumb.get('src'))
+    value_name_map = _build_pandamall_value_name_map(classify)
+    images = _extract_pandamall_images(product)
 
     variant_groups = []
     for prop in classify.get('skuProperties', []):
         if not isinstance(prop, dict):
             continue
 
-        prop_id = _normalize_string(prop.get('propID'))
+        raw_prop_id = _normalize_string(prop.get('propID'))
+        prop_id = _normalize_numeric_identifier(prop.get('propID'))
         values = []
         for item in prop.get('propValues', []):
             if not isinstance(item, dict):
                 continue
 
             value_name = _normalize_string(item.get('valueName'))
-            value_id = _normalize_string(item.get('valueID'))
+            raw_value_id = _normalize_string(item.get('valueID'))
+            value_id = _normalize_numeric_identifier(item.get('valueID'))
             if not value_name:
                 continue
 
@@ -638,38 +977,46 @@ def _adapt_pandamall(bridge_response: Dict[str, Any], context: Dict[str, str]) -
                 'sourcePropertyId': prop_id,
                 'sourceValueId': value_id,
             }
-            image = _normalize_string(sku_images.get(f'{prop_id}:{value_id}'))
+            image = _normalize_string(sku_images.get(f'{raw_prop_id}:{raw_value_id}'))
             if image:
                 value_payload['image'] = image
             values.append(value_payload)
 
         group_name = _normalize_string(prop.get('propName'))
         if group_name and values:
-            variant_groups.append({'name': group_name, 'values': values})
+            variant_groups.append({
+                'name': group_name,
+                'sourcePropertyId': prop_id,
+                'values': values,
+            })
 
     skus = []
     sku_mappings = classify.get('skuMappings') if isinstance(classify.get('skuMappings'), dict) else {}
-    nested_price_ranges: List[Dict[str, Any]] = []
-
-    for item in sku_mappings.values():
+    for mapping_key, item in sku_mappings.items():
         if not isinstance(item, dict):
             continue
 
-        if isinstance(item.get('priceRanges'), dict):
-            nested_price_ranges.extend(_parse_pandamall_price_ranges(item.get('priceRanges')))
-
+        image = _normalize_string(item.get('imageURL'))
+        if not image:
+            for segment in mapping_key.split('@'):
+                candidate = _normalize_string(sku_images.get(_normalize_string(segment)))
+                if candidate:
+                    image = candidate
+                    break
         skus.append({
             'skuId': _normalize_string(_first_non_empty(item.get('skuID'), item.get('skuId'))),
-            'classification': _normalize_pandamall_spec_attrs(_first_non_empty(item.get('sName'), item.get('classification'))),
+            'classification': _build_pandamall_spec_attrs(
+                _first_non_empty(item.get('sName'), item.get('classification')),
+                mapping_key,
+                value_name_map,
+            ),
             'quantity': _coerce_int(_first_non_empty(item.get('quantity'), item.get('amountOnSale'))),
             'price': _coerce_float(item.get('price')),
             'promotionPrice': _coerce_float(item.get('promotionPrice')),
-            'image': _normalize_string(item.get('imageURL')),
+            'image': image,
         })
 
-    price_ranges = _parse_pandamall_price_ranges(product.get('priceRanges'))
-    if not price_ranges and nested_price_ranges:
-        price_ranges = _normalize_range_list(nested_price_ranges)
+    price_ranges = _extract_pandamall_range_prices(product, sku_mappings)
 
     canonical = {
         'marketplace': context['marketplace'],
@@ -677,8 +1024,8 @@ def _adapt_pandamall(bridge_response: Dict[str, Any], context: Dict[str, str]) -
         'sourceId': _normalize_string(_first_non_empty(context.get('itemId'), product.get('id'))),
         'inputUrl': context['inputUrl'],
         'resolvedUrl': context['canonicalUrl'],
-        'name': _normalize_string(product.get('name')),
-        'images': _dedupe_strings(images),
+        'name': _extract_pandamall_name(product),
+        'images': images,
         'variantGroups': variant_groups,
         'skus': [sku for sku in skus if sku.get('classification') or sku.get('skuId')],
         'priceRanges': price_ranges,
@@ -704,10 +1051,33 @@ def _adapt_hangve(bridge_response: Dict[str, Any], context: Dict[str, str]) -> D
             continue
 
         group_name = _normalize_string(_first_non_empty(group.get('name'), group.get('nameOriginal')))
-        raw_values = group.get('values') or group.get('valuesOriginal') or group.get('valuesOriginalCn') or []
-        values = [{'name': _normalize_string(value)} for value in raw_values if _normalize_string(value)]
+        values = []
+
+        for entry in group.get('valueEntries', []):
+            if not isinstance(entry, dict):
+                continue
+
+            value_name = _normalize_string(_first_non_empty(entry.get('name'), entry.get('nameOriginal'), entry.get('nameOriginalCn')))
+            if not value_name:
+                continue
+
+            value_payload = {
+                'name': value_name,
+                'sourcePropertyId': _normalize_string(_first_non_empty(entry.get('sourcePropertyId'), group.get('sourcePropertyId'))) or None,
+                'sourceValueId': _normalize_string(entry.get('sourceValueId')) or None,
+            }
+            values.append(value_payload)
+
+        if not values:
+            raw_values = group.get('values') or group.get('valuesOriginal') or group.get('valuesOriginalCn') or []
+            values = [{'name': _normalize_string(value)} for value in raw_values if _normalize_string(value)]
+
         if group_name and values:
-            variant_groups.append({'name': group_name, 'values': values})
+            group_payload = {'name': group_name, 'values': values}
+            source_property_id = _normalize_string(group.get('sourcePropertyId'))
+            if source_property_id:
+                group_payload['sourcePropertyId'] = source_property_id
+            variant_groups.append(group_payload)
 
     skus = []
     for sku in normalized.get('skus', []):
@@ -786,7 +1156,7 @@ def serialize_legacy_product(canonical: Dict[str, Any]) -> Dict[str, Any]:
         sku_payload = {
             'canBookCount': _normalize_string(sku.get('quantity')),
             'price': _format_price_string(_first_non_empty(sku.get('promotionPrice'), sku.get('price'))),
-            'specAttrs': _normalize_spec_attrs(sku.get('classification')),
+            'specAttrs': _serialize_spec_attrs_for_backend(sku.get('classification')),
         }
         sku_id = _normalize_string(sku.get('skuId'))
         if sku_id:

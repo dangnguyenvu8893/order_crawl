@@ -40,7 +40,7 @@ WORKDIR /app
 
 RUN pip install --upgrade pip setuptools wheel
 
-COPY order_crawl/requirements.txt /app/order_crawl/requirements.txt
+COPY order_managerment_crawl/requirements.txt /app/order_crawl/requirements.txt
 RUN set -e && \
     echo "=== Installing Python dependencies from requirements.txt ===" && \
     pip install --no-cache-dir --verbose -r /app/order_crawl/requirements.txt && \
@@ -92,7 +92,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
 
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
-COPY order_crawl /app/order_crawl
+COPY order_managerment_crawl /app/order_crawl
 
 RUN mkdir -p /app/logs /app/logs/sessions /app/order_crawl/logs && \
     chown -R appuser:appuser /app

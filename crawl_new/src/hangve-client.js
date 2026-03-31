@@ -162,7 +162,152 @@ function uniqueHangveStrings(values) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
-function normalizeHangveVariantGroups(groups) {
+function normalizeHangveIdentifier(value) {
+  const normalized = getHangveFirstString(value);
+  return /^\d+$/.test(normalized) ? normalized : "";
+}
+
+function buildHangveSkuPropertyMetadata(skuList) {
+  if (!Array.isArray(skuList)) {
+    return [];
+  }
+
+  const groups = new Map();
+
+  for (const sku of skuList) {
+    if (!sku || typeof sku !== "object" || !Array.isArray(sku.properties)) {
+      continue;
+    }
+
+    for (const property of sku.properties) {
+      if (!property || typeof property !== "object") {
+        continue;
+      }
+
+      const sourcePropertyId = normalizeHangveIdentifier(property.propId ?? property.prop_id);
+      const groupName = getHangveFirstString(property.translatedPropName, property.propName, property.prop_name);
+      const groupNameOriginal = getHangveFirstString(property.propName, property.prop_name, property.translatedPropName);
+      const groupKey = sourcePropertyId || groupName || groupNameOriginal;
+
+      if (!groupKey) {
+        continue;
+      }
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          sourcePropertyId,
+          name: groupName,
+          nameOriginal: groupNameOriginal,
+          valueEntries: []
+        });
+      }
+
+      const targetGroup = groups.get(groupKey);
+      const sourceValueId = normalizeHangveIdentifier(property.valueId ?? property.value_id);
+      const entry = {
+        name: getHangveFirstString(property.valueName, property.rawValueName, property.rawValueNameCn),
+        nameOriginal: getHangveFirstString(property.rawValueName, property.valueName, property.rawValueNameCn),
+        nameOriginalCn: getHangveFirstString(property.rawValueNameCn, property.rawValueName, property.valueName),
+        sourcePropertyId,
+        sourceValueId
+      };
+
+      if (!entry.name && !entry.nameOriginal && !entry.nameOriginalCn) {
+        continue;
+      }
+
+      const dedupeKey = [
+        entry.sourcePropertyId,
+        entry.sourceValueId,
+        entry.name,
+        entry.nameOriginal,
+        entry.nameOriginalCn
+      ].join("::");
+
+      if (!targetGroup.valueEntries.some((currentEntry) => {
+        const currentKey = [
+          currentEntry.sourcePropertyId,
+          currentEntry.sourceValueId,
+          currentEntry.name,
+          currentEntry.nameOriginal,
+          currentEntry.nameOriginalCn
+        ].join("::");
+        return currentKey === dedupeKey;
+      })) {
+        targetGroup.valueEntries.push(entry);
+      }
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const labelsByValueId = new Map();
+    const valueIdsByLabel = new Map();
+
+    for (const entry of group.valueEntries) {
+      const label = getHangveFirstString(entry.nameOriginalCn, entry.nameOriginal, entry.name);
+      if (!label) {
+        continue;
+      }
+
+      if (entry.sourceValueId) {
+        if (!labelsByValueId.has(entry.sourceValueId)) {
+          labelsByValueId.set(entry.sourceValueId, new Set());
+        }
+        labelsByValueId.get(entry.sourceValueId).add(label);
+      }
+
+      if (!valueIdsByLabel.has(label)) {
+        valueIdsByLabel.set(label, new Set());
+      }
+      if (entry.sourceValueId) {
+        valueIdsByLabel.get(label).add(entry.sourceValueId);
+      }
+    }
+
+    return {
+      ...group,
+      valueEntries: group.valueEntries.map((entry) => {
+        const label = getHangveFirstString(entry.nameOriginalCn, entry.nameOriginal, entry.name);
+        const isUniqueValueId =
+          !!entry.sourceValueId &&
+          !!label &&
+          labelsByValueId.get(entry.sourceValueId)?.size === 1 &&
+          valueIdsByLabel.get(label)?.size === 1;
+
+        return {
+          ...entry,
+          sourceValueId: isUniqueValueId ? entry.sourceValueId : ""
+        };
+      })
+    };
+  });
+}
+
+function resolveHangveVariantMetadataGroup(group, metadataGroups = []) {
+  if (!group || typeof group !== "object") {
+    return null;
+  }
+
+  const names = [
+    getHangveFirstString(group.prop_name, group.prop_name_original),
+    getHangveFirstString(group.prop_name_original, group.prop_name),
+  ].filter(Boolean);
+
+  for (const metadataGroup of metadataGroups) {
+    if (!metadataGroup || typeof metadataGroup !== "object") {
+      continue;
+    }
+
+    const metadataNames = [metadataGroup.name, metadataGroup.nameOriginal].filter(Boolean);
+    if (names.some((name) => metadataNames.includes(name))) {
+      return metadataGroup;
+    }
+  }
+
+  return null;
+}
+
+function normalizeHangveVariantGroups(groups, metadataGroups = []) {
   if (!Array.isArray(groups)) {
     return [];
   }
@@ -183,12 +328,43 @@ function normalizeHangveVariantGroups(groups) {
         return null;
       }
 
+      const metadataGroup = resolveHangveVariantMetadataGroup(group, metadataGroups);
+      const valueEntries = [];
+
+      if (metadataGroup?.valueEntries?.length) {
+        for (const metadataEntry of metadataGroup.valueEntries) {
+          const metadataNames = [
+            metadataEntry.name,
+            metadataEntry.nameOriginal,
+            metadataEntry.nameOriginalCn
+          ].filter(Boolean);
+          const matchesValue =
+            values.some((value) => metadataNames.includes(value)) ||
+            valuesOriginal.some((value) => metadataNames.includes(value)) ||
+            valuesOriginalCn.some((value) => metadataNames.includes(value));
+
+          if (!matchesValue) {
+            continue;
+          }
+
+          valueEntries.push({
+            name: metadataEntry.name,
+            nameOriginal: metadataEntry.nameOriginal,
+            nameOriginalCn: metadataEntry.nameOriginalCn,
+            sourcePropertyId: metadataEntry.sourcePropertyId,
+            sourceValueId: metadataEntry.sourceValueId
+          });
+        }
+      }
+
       return {
         name,
         nameOriginal,
         values,
         valuesOriginal,
-        valuesOriginalCn
+        valuesOriginalCn,
+        sourcePropertyId: metadataGroup?.sourcePropertyId ?? "",
+        valueEntries
       };
     })
     .filter(Boolean);
@@ -303,6 +479,7 @@ function normalizeHangveItemDetailPayload(detailPayload = {}) {
   const parsedData = parseHangveJsonValue(normalizedDetailPayload.data);
   const parsedItem =
     parsedData?.item && typeof parsedData.item === "object" ? parsedData.item : {};
+  const skuPropertyMetadata = buildHangveSkuPropertyMetadata(parsedBuyderData?.skuList);
   const priceRanges = normalizeHangvePriceRanges(
     parsedBuyderData?.priceRangeList ??
       parsedBuyderData?.price_ranges ??
@@ -316,7 +493,7 @@ function normalizeHangveItemDetailPayload(detailPayload = {}) {
     ...normalizeHangveStringArray(parsedItem.images),
     getHangveFirstString(normalizedDetailPayload.pic, parsedItem.pic)
   ]);
-  const variantGroups = normalizeHangveVariantGroups(parsedSkuProperties?.properties);
+  const variantGroups = normalizeHangveVariantGroups(parsedSkuProperties?.properties, skuPropertyMetadata);
   const skus = normalizeHangveSkus(parsedSkuProperties?.details);
   const attributes = normalizeHangveAttributes(parsedItem.properties);
   const descriptionHtml = getHangveFirstString(

@@ -207,3 +207,95 @@ test("normalizeHangveItemDetailPayload parses taobao detail strings", () => {
   assert.equal(normalized.skus[0].price, 151.52);
   assert.equal(normalized.skus[0].promotionPrice, 143.95);
 });
+
+test("normalizeHangveItemDetailPayload enriches property ids conservatively from buyder_data skuList", () => {
+  const normalized = normalizeHangveItemDetailPayload({
+    id: 1471325,
+    source: "1688",
+    num_iid: "724268378451",
+    title: "French dress",
+    buyder_data: JSON.stringify({
+      skuList: [
+        {
+          skuId: "sku-1",
+          mpSkuId: "mp-sku-1",
+          properties: [
+            {
+              propId: 3216,
+              valueId: 3216,
+              propName: "颜色",
+              translatedPropName: "Màu sắc",
+              valueName: "Màu mơ bên ngoài CHK159",
+              rawValueName: "Màu mơ bên ngoài CHK159",
+              rawValueNameCn: "杏色外披CHK159"
+            },
+            {
+              propId: 450,
+              valueId: 450,
+              propName: "尺码",
+              translatedPropName: "Kích cỡ",
+              valueName: "Một size",
+              rawValueName: "Một size",
+              rawValueNameCn: "均码"
+            }
+          ]
+        },
+        {
+          skuId: "sku-2",
+          mpSkuId: "mp-sku-2",
+          properties: [
+            {
+              propId: 3216,
+              valueId: 3216,
+              propName: "颜色",
+              translatedPropName: "Màu sắc",
+              valueName: "Áo khoác ngoài màu trắng CHK159",
+              rawValueName: "Áo khoác ngoài màu trắng CHK159",
+              rawValueNameCn: "白色外披CHK159"
+            },
+            {
+              propId: 450,
+              valueId: 450,
+              propName: "尺码",
+              translatedPropName: "Kích cỡ",
+              valueName: "Một size",
+              rawValueName: "Một size",
+              rawValueNameCn: "均码"
+            }
+          ]
+        }
+      ]
+    }),
+    sku_properties: JSON.stringify({
+      properties: [
+        {
+          prop_name: "Màu sắc",
+          prop_name_original: "颜色",
+          prop_values: ["Màu mơ bên ngoài CHK159", "Áo khoác ngoài màu trắng CHK159"],
+          prop_values_original: ["Màu mơ bên ngoài CHK159", "Áo khoác ngoài màu trắng CHK159"],
+          prop_values_original_cn: ["杏色外披CHK159", "白色外披CHK159"]
+        },
+        {
+          prop_name: "Kích cỡ",
+          prop_name_original: "尺码",
+          prop_values: ["Một size"],
+          prop_values_original: ["Một size"],
+          prop_values_original_cn: ["均码"]
+        }
+      ],
+      details: [
+        {
+          classification: "Màu mơ bên ngoài CHK159;Một size",
+          classification_cn: "杏色外披CHK159;均码",
+          mp_sku_id: "mp-sku-1"
+        }
+      ]
+    })
+  });
+
+  assert.equal(normalized.variantGroups[0].sourcePropertyId, "3216");
+  assert.equal(normalized.variantGroups[0].valueEntries[0].sourcePropertyId, "3216");
+  assert.equal(normalized.variantGroups[0].valueEntries[0].sourceValueId, "");
+  assert.equal(normalized.variantGroups[1].sourcePropertyId, "450");
+  assert.equal(normalized.variantGroups[1].valueEntries[0].sourceValueId, "450");
+});

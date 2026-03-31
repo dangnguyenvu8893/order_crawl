@@ -293,15 +293,13 @@ class TransformerGianghuy:
 
     def _build_spec_attrs(self, sku_property_name: str, prop_names: List[str]) -> str:
         """
-        "黑色;M;" + ["颜色分类","尺码"] → "颜色分类--黑色|尺码--M"
+        Chuẩn contract backend hiện tại: chỉ emit value labels, không kèm prop labels.
+
+        "黑色;M;" + ["颜色分类","尺码"] → "黑色|M"
         Nếu không có prop_names (edge case) → "黑色|M"
         """
         value_parts = [p for p in sku_property_name.split(";") if p.strip()]
-
-        if prop_names and len(prop_names) == len(value_parts):
-            return "|".join(f"{prop}--{val}" for prop, val in zip(prop_names, value_parts))
-
-        # Fallback: chỉ ghép values
+        _ = prop_names
         return "|".join(value_parts)
 
 
