@@ -1,0 +1,15 @@
+{
+  "name": "order-crawl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-endpoint Node crawler service for 1688, Taobao, and Tmall product transforms.",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server/index.js",
+    "test": "node --test test/*.test.js",
+    "test:providers": "node scripts/provider-smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

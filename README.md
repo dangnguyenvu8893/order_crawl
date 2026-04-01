@@ -1,154 +1,118 @@
-# 1688 Selenium Service
+# Order Crawl
 
-Service Selenium được dockerize để load và crawl dữ liệu từ trang web 1688.com.
+Service Node duy nhất để backend gửi 1 URL sản phẩm từ `1688`, `taobao`, `tmall` và nhận về payload đúng contract backend import.
 
-## Tính năng
+## Endpoints
 
-- Load trang web 1688.com với Selenium WebDriver
-- API endpoints để trigger việc load trang
-- Xử lý JavaScript và dynamic content
-- Trích xuất thông tin sản phẩm, giá cả, mô tả
-- Dockerized để dễ dàng deploy
+`GET /health`
 
-## Cài đặt và chạy
+`POST /transform-product-from-url`
 
-### Sử dụng Docker Compose (Khuyến nghị)
-
-1. Clone repository:
-```bash
-git clone <repository-url>
-cd order_managerment_crawl
-```
-
-2. Build và chạy service:
-```bash
-docker-compose up --build
-```
-
-3. Service sẽ chạy tại: `http://localhost:5000`
-
-### Sử dụng Docker trực tiếp
-
-1. Build image:
-```bash
-docker build -t 1688-selenium-service .
-```
-
-2. Chạy container:
-```bash
-docker run -p 5000:5000 --name 1688-selenium 1688-selenium-service
-```
-
-## API Endpoints
-
-### 1. Health Check
-```
-GET /health
-```
-Kiểm tra trạng thái service.
-
-
-
-### 2. Load sản phẩm 1688.com
-```
-POST /load-1688-product
-Content-Type: application/json
-
-{
-  "product_id": "948998794646"
-}
-```
-
-**Parameters:**
-- `product_id` (required): ID sản phẩm 1688.com
-
-## Ví dụ sử dụng
-
-### Test với curl
-
-1. Health check:
-```bash
-curl http://localhost:5000/health
-```
-
-2. Load sản phẩm 1688:
-```bash
-curl -X POST http://localhost:5000/load-1688-product \
-  -H "Content-Type: application/json" \
-  -d '{"product_id": "948998794646"}'
-```
-
-### Test với Python
-
-```python
-import requests
-import json
-
-# Load trang sản phẩm 1688
-url = "http://localhost:5000/load-1688-product"
-data = {"product_id": "948998794646"}
-
-response = requests.post(url, json=data)
-result = response.json()
-
-print(f"Status: {result['status']}")
-print(f"Content length: {result['content_length']}")
-print(f"Product ID: {result['product_id']}")
-print(f"URL: {result['url']}")
-```
-
-## Cấu trúc Response
-
-### Success Response
 ```json
 {
-  "status": "success",
-  "product_id": "948998794646",
-  "url": "https://detail.1688.com/offer/948998794646.html",
-  "content": "<!DOCTYPE html>...",
-  "content_length": 50000,
-  "cookies_used": 15,
-  "timestamp": 1703123456.789
+  "url": "https://detail.1688.com/offer/892407994374.html",
+  "debug": false
 }
 ```
 
-### Error Response
+Response success mặc định chỉ gồm:
+
 ```json
 {
-  "error": "Error message"
+  "name": "string",
+  "maxPrice": "string",
+  "sourceId": "string",
+  "sourceType": "1688|taobao|tmall",
+  "url": "https://...",
+  "images": ["https://..."],
+  "rangePrices": [
+    {
+      "beginAmount": 1,
+      "endAmount": 9,
+      "price": 10.5,
+      "discountPrice": 10.5
+    }
+  ],
+  "skuProperty": [
+    {
+      "name": "Màu",
+      "sourcePropertyId": "123",
+      "values": [
+        {
+          "name": "Đỏ",
+          "sourceValueId": "456",
+          "image": "https://..."
+        }
+      ]
+    }
+  ],
+  "sku": [
+    {
+      "canBookCount": "5",
+      "price": "10.50",
+      "specAttrs": "Đỏ|M",
+      "skuId": "789"
+    }
+  ]
 }
 ```
 
-## Troubleshooting
+Khi `debug=true`, response thêm `_meta` để xem provider fallback và latency.
 
-### Lỗi Chrome Driver
-- Kiểm tra logs container: `docker logs 1688-selenium-service`
-- Đảm bảo Chrome và ChromeDriver versions tương thích
+## Provider Priority
 
-### Lỗi Memory
-- Tăng memory limit cho container trong docker-compose.yml
-- Giảm số lượng concurrent requests
+- `1688`: `gianghuy -> vipomall -> hangve -> pandamall`
+- `taobao`: `gianghuy -> vipomall -> hangve -> pandamall`
+- `tmall`: `vipomall -> hangve -> pandamall`
 
-### Lỗi Network
-- Kiểm tra firewall settings
-- Đảm bảo container có thể truy cập internet
+`pandamall` luôn là fallback cuối.
 
-## Logs
+## Chạy Local
 
-Logs được lưu trong thư mục `./logs` và có thể xem bằng:
 ```bash
-docker logs -f 1688-selenium-service
+npm test
+npm run test:providers
+npm start
 ```
 
-## Bảo mật
+Service mặc định chạy ở `http://localhost:3000`.
 
-- Service chạy với user `selenium` (không phải root)
-- Chỉ expose port 5000
-- Sử dụng bridge network để isolate
+`npm test` là suite unit/integration local không gọi network thật.
 
-## Performance
+`npm run test:providers` là live smoke test để biết provider nào còn hoạt động thực tế với credential hiện có. Script sẽ trả JSON theo từng marketplace/provider và exit code `1` nếu có provider fail hoặc trả payload không đủ contract.
 
-- Mỗi request tạo một Chrome instance mới
-- Tự động cleanup resources sau mỗi request
-- Health check để monitor service status
+## Cấu hình
 
+Ưu tiên đọc credential từ `./config/*.json`.
+
+Để không làm gãy máy đang dùng credential cũ, service vẫn fallback đọc từ `./crawl_new/config/*.json` nếu file mới chưa tồn tại.
+
+Các file hỗ trợ:
+
+- `config/gianghuy.credentials.json`
+- `config/hangve.credentials.json`
+- `config/hangve.accounts.json`
+- `config/pandamall.credentials.json`
+- `config/pandamall.accounts.json`
+
+Ví dụ PandaMall:
+
+```json
+{
+  "phone": "0900000000",
+  "password": "secret"
+}
+```
+
+Ví dụ Hangve accounts:
+
+```json
+{
+  "accounts": [
+    {
+      "username": "0900000000",
+      "password": "secret"
+    }
+  ]
+}
+```
