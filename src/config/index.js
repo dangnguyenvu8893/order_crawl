@@ -90,6 +90,11 @@ const ORCHESTRATOR_RESULT_CACHE_TTL_MS = toNonNegativeInt(
   30 * 1000
 );
 const ORCHESTRATOR_REQUEST_DEADLINE_MS = toPositiveInt(process.env.CRAWL_REQUEST_DEADLINE_MS, 9 * 1000);
+const URL_RESOLVER_TIMEOUT_MS = toPositiveInt(process.env.CRAWL_URL_RESOLVER_TIMEOUT_MS, 2500);
+const URL_RESOLVER_MAX_RESPONSE_BYTES = toPositiveInt(
+  process.env.CRAWL_URL_RESOLVER_MAX_RESPONSE_BYTES,
+  256 * 1024
+);
 const PROVIDER_GUARD_MODE = toMode(process.env.CRAWL_PROVIDER_GUARD_MODE, "adaptive");
 const PROVIDER_GUARD_SETTINGS = Object.freeze({
   gianghuy: buildProviderGuardSettings("CRAWL_GUARD_GIANGHUY", {
@@ -222,6 +227,8 @@ module.exports = {
   PROVIDER_START_DELAYS_MS,
   PROVIDER_TIMEOUTS_MS,
   SERVICE_PORT,
+  URL_RESOLVER_MAX_RESPONSE_BYTES,
+  URL_RESOLVER_TIMEOUT_MS,
   getProviderAccounts,
   getProviderChain,
   getProviderGuardSettings,

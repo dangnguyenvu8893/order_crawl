@@ -15,16 +15,25 @@ const {
 } = require("./orchestrator-state");
 const { DEFAULT_PROVIDER_EXECUTION_GUARD } = require("./provider-guard");
 const { HttpError, isAbortError } = require("./errors");
-const { parseProductUrl } = require("./url");
+const { buildProductContextFromInput } = require("./url-resolver");
 
 function buildDebugMeta(context, attempts, providerUsed, startedAt, extra = {}) {
   return {
     marketplace: context.marketplace,
+    inputUrl: context.inputUrl,
+    originalInput: context.originalInput,
     providerUsed,
     attempts,
     fallbackTriggered: attempts.length > 1,
     failureReasons: attempts.filter((attempt) => !attempt.success).map((attempt) => attempt.message),
     latencyMs: Date.now() - startedAt,
+    resolver: context.resolution
+      ? {
+          method: context.resolution.method,
+          extractedFromText: context.resolution.extractedFromText,
+          networkAttempted: context.resolution.networkAttempted
+        }
+      : undefined,
     ...extra
   };
 }
@@ -360,10 +369,11 @@ async function transformProductFromUrl(
     providerStartDelaysMs = {},
     requestDeadlineMs = ORCHESTRATOR_REQUEST_DEADLINE_MS,
     resultCacheTtlMs = ORCHESTRATOR_RESULT_CACHE_TTL_MS,
-    providerExecutionGuard = DEFAULT_PROVIDER_EXECUTION_GUARD
+    providerExecutionGuard = DEFAULT_PROVIDER_EXECUTION_GUARD,
+    buildContext = buildProductContextFromInput
   } = {}
 ) {
-  const context = parseProductUrl(url);
+  const context = await buildContext(url);
   const startedAt = Date.now();
   const cacheKey = context.canonicalUrl;
 

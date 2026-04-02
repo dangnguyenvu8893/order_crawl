@@ -410,3 +410,34 @@ test("orchestrator can swap provider guard strategy without touching providers",
   assert.equal(payload._meta.providerUsed, "vipomall");
   assert.equal(payload._meta.attempts[0].message, "custom guard skipped gianghuy");
 });
+
+test("orchestrator resolves non-detail input before provider execution", async () => {
+  let providerContext = null;
+  const providers = {
+    gianghuy: {
+      async resolveProduct(context) {
+        providerContext = context;
+        return {
+          canonical: buildCanonicalProduct("taobao", "1033960738640"),
+          accountAttempts: []
+        };
+      }
+    }
+  };
+
+  const payload = await transformProductFromUrl(
+    "Tôi gửi link share: https://item.taobao.com/item.htm?id=1033960738640&spm=abc",
+    {
+      debug: true,
+      providers,
+      providerStartDelaysMs: {
+        gianghuy: 0
+      }
+    }
+  );
+
+  assert.equal(payload.sourceId, "1033960738640");
+  assert.equal(providerContext.inputUrl, "https://item.taobao.com/item.htm?id=1033960738640");
+  assert.equal(providerContext.originalInput, "Tôi gửi link share: https://item.taobao.com/item.htm?id=1033960738640&spm=abc");
+  assert.equal(payload._meta.resolver.method, "text_extract_direct");
+});
