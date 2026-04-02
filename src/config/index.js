@@ -17,6 +17,23 @@ function toNonNegativeInt(value, fallback) {
   return Number.isFinite(normalized) && normalized >= 0 ? normalized : fallback;
 }
 
+function toBoolean(value, fallback) {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
+}
+
+function toMode(value, fallback) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return normalized || fallback;
+}
+
 function normalizeAccountEntries(rawAccounts, userKey) {
   const accountsInput =
     rawAccounts && typeof rawAccounts === "object" && !Array.isArray(rawAccounts)
@@ -56,7 +73,54 @@ function buildSingletonAccount(credentials, userKey, envUserKey, envPasswordKey,
   ];
 }
 
+function buildProviderGuardSettings(prefix, defaults) {
+  return Object.freeze({
+    enabled: toBoolean(process.env[`${prefix}_ENABLED`], defaults.enabled),
+    maxInflight: toPositiveInt(process.env[`${prefix}_MAX_INFLIGHT`], defaults.maxInflight),
+    minIntervalMs: toNonNegativeInt(process.env[`${prefix}_MIN_INTERVAL_MS`], defaults.minIntervalMs),
+    failureThreshold: toPositiveInt(process.env[`${prefix}_FAILURE_THRESHOLD`], defaults.failureThreshold),
+    cooldownMs: toNonNegativeInt(process.env[`${prefix}_COOLDOWN_MS`], defaults.cooldownMs)
+  });
+}
+
 const SERVICE_PORT = toPositiveInt(process.env.PORT, 3000);
+const HANGVE_SESSION_TTL_MS = toPositiveInt(process.env.HANGVE_SESSION_TTL_MS, 10 * 60 * 1000);
+const ORCHESTRATOR_RESULT_CACHE_TTL_MS = toNonNegativeInt(
+  process.env.CRAWL_RESULT_CACHE_TTL_MS,
+  30 * 1000
+);
+const ORCHESTRATOR_REQUEST_DEADLINE_MS = toPositiveInt(process.env.CRAWL_REQUEST_DEADLINE_MS, 9 * 1000);
+const PROVIDER_GUARD_MODE = toMode(process.env.CRAWL_PROVIDER_GUARD_MODE, "adaptive");
+const PROVIDER_GUARD_SETTINGS = Object.freeze({
+  gianghuy: buildProviderGuardSettings("CRAWL_GUARD_GIANGHUY", {
+    enabled: true,
+    maxInflight: 12,
+    minIntervalMs: 0,
+    failureThreshold: 8,
+    cooldownMs: 1000
+  }),
+  vipomall: buildProviderGuardSettings("CRAWL_GUARD_VIPOMALL", {
+    enabled: true,
+    maxInflight: 10,
+    minIntervalMs: 0,
+    failureThreshold: 8,
+    cooldownMs: 1000
+  }),
+  hangve: buildProviderGuardSettings("CRAWL_GUARD_HANGVE", {
+    enabled: true,
+    maxInflight: 2,
+    minIntervalMs: 250,
+    failureThreshold: 4,
+    cooldownMs: 5000
+  }),
+  pandamall: buildProviderGuardSettings("CRAWL_GUARD_PANDAMALL", {
+    enabled: true,
+    maxInflight: 4,
+    minIntervalMs: 100,
+    failureThreshold: 6,
+    cooldownMs: 3000
+  })
+});
 const PROVIDER_TIMEOUTS_MS = Object.freeze({
   gianghuy: toPositiveInt(process.env.CRAWL_GIANGHUY_TIMEOUT_MS, 15000),
   vipomall: toPositiveInt(process.env.CRAWL_VIPOMALL_TIMEOUT_MS, 10000),
@@ -135,16 +199,32 @@ function getProviderAccounts(providerName) {
   return [];
 }
 
+function getProviderGuardSettings(providerName) {
+  return PROVIDER_GUARD_SETTINGS[providerName] ?? {
+    enabled: false,
+    maxInflight: 1,
+    minIntervalMs: 0,
+    failureThreshold: 1,
+    cooldownMs: 0
+  };
+}
+
 module.exports = {
   ALLOWED_SOURCE_TYPES,
   HANGVE_ACCOUNTS,
+  HANGVE_SESSION_TTL_MS,
+  ORCHESTRATOR_REQUEST_DEADLINE_MS,
+  ORCHESTRATOR_RESULT_CACHE_TTL_MS,
   PANDAMALL_ACCOUNTS,
   PROVIDER_CHAINS,
+  PROVIDER_GUARD_MODE,
+  PROVIDER_GUARD_SETTINGS,
   PROVIDER_START_DELAYS_MS,
   PROVIDER_TIMEOUTS_MS,
   SERVICE_PORT,
   getProviderAccounts,
   getProviderChain,
+  getProviderGuardSettings,
   getProviderStartDelayMs,
   getProviderTimeoutMs
 };

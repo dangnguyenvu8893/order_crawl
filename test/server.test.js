@@ -4,6 +4,8 @@ const { once } = require("node:events");
 
 const { HttpError } = require("../src/core/errors");
 const { transformProductFromUrl } = require("../src/core/orchestrator");
+const { resetOrchestratorRuntimeState } = require("../src/core/orchestrator-state");
+const { resetProviderExecutionGuardState } = require("../src/core/provider-guard");
 const { createServer } = require("../src/server/app");
 
 function buildCanonicalProduct(sourceType, sourceId) {
@@ -46,6 +48,11 @@ async function withServer(transform, callback) {
     await once(server, "close");
   }
 }
+
+test.beforeEach(() => {
+  resetOrchestratorRuntimeState();
+  resetProviderExecutionGuardState();
+});
 
 test("GET /health returns ok", async () => {
   await withServer(async () => ({}), async (baseUrl) => {

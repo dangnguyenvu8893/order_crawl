@@ -116,3 +116,32 @@ Ví dụ Hangve accounts:
   ]
 }
 ```
+
+## Provider Guard
+
+Lớp chống spam/chống block được đặt riêng ở orchestrator runtime, không nằm trong provider:
+
+- `src/core/provider-guard.js`
+- `src/core/orchestrator.js`
+
+Provider chỉ biết `resolveProduct(context, { signal })`. Nếu muốn bỏ hẳn anti-block solution hoặc thay bằng strategy khác, chỉ cần:
+
+- đổi `CRAWL_PROVIDER_GUARD_MODE=off`
+- hoặc truyền `providerExecutionGuard` khác vào `transformProductFromUrl(...)`
+
+Env chính:
+
+- `CRAWL_PROVIDER_GUARD_MODE=adaptive|off`
+- `CRAWL_GUARD_GIANGHUY_MAX_INFLIGHT`
+- `CRAWL_GUARD_VIPOMALL_MAX_INFLIGHT`
+- `CRAWL_GUARD_HANGVE_MAX_INFLIGHT`
+- `CRAWL_GUARD_PANDAMALL_MAX_INFLIGHT`
+- `CRAWL_GUARD_HANGVE_MIN_INTERVAL_MS`
+- `CRAWL_GUARD_PANDAMALL_MIN_INTERVAL_MS`
+- `CRAWL_GUARD_<PROVIDER>_FAILURE_THRESHOLD`
+- `CRAWL_GUARD_<PROVIDER>_COOLDOWN_MS`
+
+Ngoài guard, orchestrator còn có:
+
+- `CRAWL_RESULT_CACHE_TTL_MS`
+- `CRAWL_REQUEST_DEADLINE_MS`

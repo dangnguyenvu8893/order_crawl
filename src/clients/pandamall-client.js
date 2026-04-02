@@ -372,6 +372,46 @@ async function loginPandamallAndGetAccessToken(options = {}) {
   };
 }
 
+async function requestPandamallItemDetails({ itemId, provider, url, accessToken, ...options } = {}) {
+  const resolvedInput = resolvePandamallItemLookupInput({
+    itemId,
+    provider,
+    url
+  });
+
+  if (!resolvedInput.itemId) {
+    throw new Error("itemId is required");
+  }
+
+  if (!resolvedInput.normalizedProvider) {
+    throw new Error("provider is required");
+  }
+
+  const requestHeaders = {};
+  if (accessToken) {
+    requestHeaders.authorization = `Bearer ${accessToken}`;
+  }
+
+  const itemDetailsResult = await requestPandamallJson("/api/pandamall/v1/item/details", {
+    method: "POST",
+    headers: requestHeaders,
+    body: {
+      item_id: Number(resolvedInput.itemId),
+      provider: resolvedInput.normalizedProvider
+    },
+    ...options
+  });
+
+  return {
+    input: resolvedInput,
+    itemDetails: itemDetailsResult
+  };
+}
+
+async function getPandamallItemDetailsNoAuth(options = {}) {
+  return requestPandamallItemDetails(options);
+}
+
 async function getPandamallItemDetails({ itemId, provider, url, ...options } = {}) {
   const resolvedInput = resolvePandamallItemLookupInput({
     itemId,
@@ -388,15 +428,11 @@ async function getPandamallItemDetails({ itemId, provider, url, ...options } = {
   }
 
   const { accessToken, loginResult } = await loginPandamallAndGetAccessToken(options);
-  const itemDetailsResult = await requestPandamallJson("/api/pandamall/v1/item/details", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${accessToken}`
-    },
-    body: {
-      item_id: Number(resolvedInput.itemId),
-      provider: resolvedInput.normalizedProvider
-    },
+  const itemDetailsResult = await requestPandamallItemDetails({
+    itemId: resolvedInput.itemId,
+    provider: resolvedInput.normalizedProvider,
+    url: resolvedInput.url,
+    accessToken,
     keyPair: loginResult?.request?.dpop?.keyPair,
     ...options
   });
@@ -406,8 +442,8 @@ async function getPandamallItemDetails({ itemId, provider, url, ...options } = {
       accessToken,
       login: loginResult
     },
-    input: resolvedInput,
-    itemDetails: itemDetailsResult
+    input: itemDetailsResult.input,
+    itemDetails: itemDetailsResult.itemDetails
   };
 }
 
@@ -421,6 +457,7 @@ module.exports = {
   encodeUtf8LikeBundle,
   generatePandamallKeyPair,
   getPandamallItemDetails,
+  getPandamallItemDetailsNoAuth,
   loginPandamallAndGetAccessToken,
   loginPandamall,
   loadOptionalPandamallCredentials,
@@ -428,6 +465,7 @@ module.exports = {
   parsePandamallMarketplaceUrl,
   normalizePandamallProvider,
   normalizeRequestPath,
+  requestPandamallItemDetails,
   resolvePandamallItemLookupInput,
   requestPandamallJson
 };

@@ -1,26 +1,77 @@
 const { getConfig } = require("./config");
-const { generateSign } = require("./generate-sign");
+const { createSignContext, generateSignFromContext } = require("./generate-sign");
 
-function buildSignedHeaders(overrides = {}) {
-  const config = getConfig(overrides);
-  const signMeta = generateSign({
+const GIANGHUY_SIGNING_CONTEXT_CACHE = new Map();
+
+function buildSigningContextCacheKey(config) {
+  return [
+    String(config?.accessKey ?? ""),
+    String(config?.accessSecret ?? ""),
+    String(config?.endUserId ?? ""),
+    String(config?.url ?? ""),
+    String(config?.apiBaseUrl ?? "")
+  ].join("::");
+}
+
+function createGianghuySigningContext(config) {
+  const signContext = createSignContext({
     accessKey: config.accessKey,
     accessSecret: config.accessSecret,
-    timestamp: config.timestamp,
     url: config.url
   });
 
+  return Object.freeze({
+    config: Object.freeze({
+      accessKey: config.accessKey,
+      accessSecret: config.accessSecret,
+      endUserId: config.endUserId,
+      url: signContext.headerUrl,
+      apiBaseUrl: config.apiBaseUrl
+    }),
+    baseHeaders: Object.freeze({
+      accept: "application/json",
+      "access-key": config.accessKey,
+      "end-user-id": String(config.endUserId),
+      url: signContext.headerUrl
+    }),
+    signContext: Object.freeze(signContext)
+  });
+}
+
+function getGianghuySigningContext(overrides = {}) {
+  const config = getConfig(overrides);
+  const cacheKey = buildSigningContextCacheKey(config);
+
+  let signingContext = GIANGHUY_SIGNING_CONTEXT_CACHE.get(cacheKey);
+  if (!signingContext) {
+    signingContext = createGianghuySigningContext(config);
+    GIANGHUY_SIGNING_CONTEXT_CACHE.set(cacheKey, signingContext);
+  }
+
+  return signingContext;
+}
+
+function resetGianghuySigningContextCache() {
+  GIANGHUY_SIGNING_CONTEXT_CACHE.clear();
+}
+
+function buildSignedHeaders(overrides = {}) {
+  const signingContext = getGianghuySigningContext(overrides);
+  const signMeta = generateSignFromContext(signingContext.signContext, overrides.timestamp);
   const headers = {
-    accept: "application/json",
-    "access-key": config.accessKey,
-    "end-user-id": String(config.endUserId),
+    ...signingContext.baseHeaders,
     "mona-id": signMeta.monaId,
-    sign: signMeta.sign,
-    url: signMeta.headerUrl
+    sign: signMeta.sign
   };
 
   return {
-    config,
+    config:
+      overrides.timestamp === undefined
+        ? signingContext.config
+        : {
+            ...signingContext.config,
+            timestamp: overrides.timestamp
+          },
     headers,
     signMeta
   };
@@ -71,5 +122,9 @@ async function signedGetJson(path, overrides = {}) {
 
 module.exports = {
   buildSignedHeaders,
+  buildSigningContextCacheKey,
+  createGianghuySigningContext,
+  getGianghuySigningContext,
+  resetGianghuySigningContextCache,
   signedGetJson
 };

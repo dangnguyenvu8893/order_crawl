@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 
 const { HttpError } = require("../src/core/errors");
 const { transformProductFromUrl } = require("../src/core/orchestrator");
+const { resetOrchestratorRuntimeState } = require("../src/core/orchestrator-state");
+const { createNoopProviderExecutionGuard, resetProviderExecutionGuardState } = require("../src/core/provider-guard");
 
 function buildCanonicalProduct(sourceType, sourceId) {
   return {
@@ -46,6 +48,11 @@ function buildCanonicalProduct(sourceType, sourceId) {
     descriptionHtml: "<p>fake</p>"
   };
 }
+
+test.beforeEach(() => {
+  resetOrchestratorRuntimeState();
+  resetProviderExecutionGuardState();
+});
 
 test("orchestrator falls back in order and only reaches PandaMall last", async () => {
   const calls = [];
@@ -243,4 +250,163 @@ test("orchestrator returns early from faster fallback without waiting full prima
   assert.equal(payload._meta.providerUsed, "vipomall");
   assert.ok(Date.now() - startedAt < 70);
   assert.deepEqual(calls, ["gianghuy", "vipomall"]);
+});
+
+test("orchestrator dedupes concurrent requests for the same canonical URL", async () => {
+  let calls = 0;
+  const providers = {
+    gianghuy: {
+      async resolveProduct() {
+        calls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return {
+          canonical: buildCanonicalProduct("taobao", "1016154115457"),
+          accountAttempts: []
+        };
+      }
+    }
+  };
+
+  const [first, second] = await Promise.all([
+    transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+      debug: true,
+      providers,
+      providerStartDelaysMs: {
+        gianghuy: 0
+      }
+    }),
+    transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+      debug: true,
+      providers,
+      providerStartDelaysMs: {
+        gianghuy: 0
+      }
+    })
+  ]);
+
+  assert.equal(calls, 1);
+  assert.equal(first.sourceId, "1016154115457");
+  assert.equal(second.sourceId, "1016154115457");
+  assert.equal(first._meta.sharedRequest, false);
+  assert.equal(second._meta.sharedRequest, true);
+});
+
+test("orchestrator serves repeated requests from the short-lived result cache", async () => {
+  let calls = 0;
+  const providers = {
+    gianghuy: {
+      async resolveProduct() {
+        calls += 1;
+        return {
+          canonical: buildCanonicalProduct("taobao", "1016154115457"),
+          accountAttempts: []
+        };
+      }
+    }
+  };
+
+  const first = await transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+    debug: true,
+    providers,
+    providerStartDelaysMs: {
+      gianghuy: 0
+    }
+  });
+  const second = await transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+    debug: true,
+    providers,
+    providerStartDelaysMs: {
+      gianghuy: 0
+    }
+  });
+
+  assert.equal(calls, 1);
+  assert.equal(first._meta.cacheHit, false);
+  assert.equal(second._meta.cacheHit, true);
+});
+
+test("orchestrator enforces a hard request deadline", async () => {
+  const providers = {
+    gianghuy: {
+      async resolveProduct() {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        return {
+          canonical: buildCanonicalProduct("taobao", "1016154115457"),
+          accountAttempts: []
+        };
+      }
+    }
+  };
+
+  await assert.rejects(
+    transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+      providers,
+      providerStartDelaysMs: {
+        gianghuy: 0
+      },
+      requestDeadlineMs: 20
+    }),
+    (error) => {
+      assert.ok(error instanceof HttpError);
+      assert.equal(error.statusCode, 502);
+      assert.equal(error.code, "provider_deadline_exceeded");
+      assert.equal(error.details.deadlineHit, true);
+      return true;
+    }
+  );
+});
+
+test("orchestrator can swap provider guard strategy without touching providers", async () => {
+  const calls = [];
+  const providers = {
+    gianghuy: {
+      async resolveProduct() {
+        calls.push("gianghuy");
+        return {
+          canonical: buildCanonicalProduct("taobao", "1016154115457"),
+          accountAttempts: []
+        };
+      }
+    },
+    vipomall: {
+      async resolveProduct() {
+        calls.push("vipomall");
+        return {
+          canonical: buildCanonicalProduct("taobao", "1016154115457"),
+          accountAttempts: []
+        };
+      }
+    }
+  };
+  const customGuard = {
+    ...createNoopProviderExecutionGuard(),
+    beforeAttempt({ providerName }) {
+      if (providerName === "gianghuy") {
+        return {
+          allowed: false,
+          reason: "custom guard skipped gianghuy"
+        };
+      }
+
+      return {
+        allowed: true,
+        release() {}
+      };
+    },
+    afterAttempt() {}
+  };
+
+  const payload = await transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+    debug: true,
+    providers,
+    providerStartDelaysMs: {
+      gianghuy: 0,
+      vipomall: 0
+    },
+    providerExecutionGuard: customGuard
+  });
+
+  assert.deepEqual(calls, ["vipomall"]);
+  assert.equal(payload._meta.providerUsed, "vipomall");
+  assert.equal(payload._meta.attempts[0].message, "custom guard skipped gianghuy");
 });
