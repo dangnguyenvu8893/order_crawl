@@ -9,7 +9,6 @@ logs/
 
 # Local credentials
 config/*.json
-crawl_new/config/*.json
 
 # OS generated files
 .DS_Store

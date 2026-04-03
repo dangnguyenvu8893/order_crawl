@@ -6,7 +6,7 @@ COPY package.json ./package.json
 COPY src ./src
 COPY README.md ./README.md
 
-RUN mkdir -p /app/config /app/crawl_new/config
+RUN mkdir -p /app/config
 
 ENV NODE_ENV=production
 ENV PORT=3000

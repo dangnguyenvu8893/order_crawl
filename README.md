@@ -83,9 +83,7 @@ Service mặc định chạy ở `http://localhost:3000`.
 
 ## Cấu hình
 
-Ưu tiên đọc credential từ `./config/*.json`.
-
-Để không làm gãy máy đang dùng credential cũ, service vẫn fallback đọc từ `./crawl_new/config/*.json` nếu file mới chưa tồn tại.
+Service chỉ đọc credential từ `./config/*.json`.
 
 Các file hỗ trợ:
 

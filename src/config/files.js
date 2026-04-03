@@ -2,10 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT_DIR = path.resolve(__dirname, "../..");
-const CONFIG_DIRS = [
-  path.join(ROOT_DIR, "config"),
-  path.join(ROOT_DIR, "crawl_new", "config")
-];
+const CONFIG_DIRS = [path.join(ROOT_DIR, "config")];
 
 function getConfigSearchPaths(filename) {
   return CONFIG_DIRS.map((directory) => path.join(directory, filename));
