@@ -130,3 +130,53 @@ test("pandamall provider falls back to auth accounts when no-auth payload is inc
     }
   ]);
 });
+
+test("pandamall provider rejects degraded translated labels for taobao source matching", async () => {
+  const context = buildContext();
+  const provider = createPandamallProvider({
+    async fetchNoAuth() {
+      return {
+        itemDetails: {
+          response: {
+            data: {
+              status: true,
+              data: {
+                id: context.itemId,
+                name: "Degraded"
+              }
+            }
+          }
+        }
+      };
+    },
+    getAccounts() {
+      return [];
+    },
+    mapToCanonical(raw, activeContext) {
+      return buildCanonical(raw.data.name, activeContext, {
+        variantGroups: [
+          {
+            name: "Thông số sản phẩm",
+            sourcePropertyId: null,
+            values: [{ name: "Hành khách [phải]", sourceValueId: null, image: null }]
+          }
+        ],
+        variants: [
+          {
+            skuId: "sku-1",
+            specAttrs: "Hành khách [phải]",
+            quantity: 10,
+            price: 10,
+            promotionPrice: 10,
+            image: null
+          }
+        ]
+      });
+    }
+  });
+
+  await assert.rejects(
+    provider.resolveProduct(context),
+    /incomplete|degraded/i
+  );
+});

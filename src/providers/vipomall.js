@@ -1,5 +1,6 @@
 const { getVipomallProductByLink } = require("../clients/vipomall-client");
 const { mapVipomallToCanonical } = require("../mappers/vipomall");
+const { getSourceLabelContractReasons } = require("./source-label-contract");
 const { buildProviderSignal } = require("./utils");
 
 async function resolveProduct(context, { signal: externalSignal } = {}) {
@@ -18,8 +19,14 @@ async function resolveProduct(context, { signal: externalSignal } = {}) {
     throw new Error(String(raw.message || "VipoMall request failed"));
   }
 
+  const canonical = mapVipomallToCanonical(raw, context);
+  const sourceLabelReasons = getSourceLabelContractReasons(canonical, context);
+  if (sourceLabelReasons.length > 0) {
+    throw new Error(`VipoMall degraded source labels: ${sourceLabelReasons.join(", ")}`);
+  }
+
   return {
-    canonical: mapVipomallToCanonical(raw, context),
+    canonical,
     accountAttempts: []
   };
 }

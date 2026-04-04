@@ -34,11 +34,11 @@ function normalizeVipomallDescriptionHtml(value) {
 function extractVipomallVariantGroups(product) {
   return (product.product_prop_list ?? [])
     .map((property) => ({
-      name: normalizeString(firstNonEmpty(property?.prop_name, property?.original_prop_name)),
+      name: normalizeString(firstNonEmpty(property?.original_prop_name, property?.prop_name)),
       sourcePropertyId: normalizeNumericIdentifier(property?.prop_id),
       values: (property?.value_list ?? [])
         .map((value) => ({
-          name: normalizeString(firstNonEmpty(value?.value_name, value?.original_value_name)),
+          name: normalizeString(firstNonEmpty(value?.original_value_name, value?.value_name)),
           sourceValueId: normalizeNumericIdentifier(value?.value_id),
           image: normalizeVipomallUrl(firstNonEmpty(value?.img_url))
             ? normalizeVipomallUrl(firstNonEmpty(value?.img_url))
@@ -54,7 +54,7 @@ function extractVipomallVariants(product) {
     .map((sku) => ({
       skuId: normalizeString(sku?.sku_id),
       specAttrs: (sku?.sku_prop_list ?? [])
-        .map((prop) => normalizeString(firstNonEmpty(prop?.value_name, prop?.original_value_name)))
+        .map((prop) => normalizeString(firstNonEmpty(prop?.original_value_name, prop?.value_name)))
         .filter(Boolean)
         .join("|"),
       quantity: coerceInt(firstNonEmpty(sku?.stock, sku?.min_purchase)),
@@ -118,7 +118,7 @@ function mapVipomallToCanonical(raw, context) {
     sourceId: normalizeString(firstNonEmpty(product.product_id, context.itemId)),
     inputUrl: context.inputUrl,
     url: context.canonicalUrl,
-    name: normalizeString(firstNonEmpty(product.product_name, product.original_product_name)),
+    name: normalizeString(firstNonEmpty(product.original_product_name, product.product_name)),
     images: dedupeStrings((product.main_img_url_list ?? []).map((image) => normalizeVipomallUrl(image)).filter(Boolean)),
     variantGroups: extractVipomallVariantGroups(product),
     variants,

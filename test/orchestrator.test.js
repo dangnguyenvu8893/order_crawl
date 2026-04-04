@@ -252,6 +252,53 @@ test("orchestrator returns early from faster fallback without waiting full prima
   assert.deepEqual(calls, ["gianghuy", "vipomall"]);
 });
 
+test("orchestrator skips degraded translated winner and waits for clean fallback", async () => {
+  const calls = [];
+  const providers = {
+    gianghuy: {
+      async resolveProduct() {
+        calls.push("gianghuy");
+        throw new Error("gianghuy failed");
+      }
+    },
+    vipomall: {
+      async resolveProduct() {
+        calls.push("vipomall");
+        throw new Error("VipoMall degraded source labels: translated property label: Thông số sản phẩm");
+      }
+    },
+    hangve: {
+      async resolveProduct() {
+        calls.push("hangve");
+        return {
+          canonical: buildCanonicalProduct("taobao", "1016154115457"),
+          accountAttempts: []
+        };
+      }
+    },
+    pandamall: {
+      async resolveProduct() {
+        calls.push("pandamall");
+        throw new Error("PandaMall incomplete payload: translated property label: Thông số sản phẩm");
+      }
+    }
+  };
+
+  const payload = await transformProductFromUrl("https://item.taobao.com/item.htm?id=1016154115457", {
+    debug: true,
+    providers,
+    providerStartDelaysMs: {
+      gianghuy: 0,
+      vipomall: 5,
+      hangve: 10,
+      pandamall: 20
+    }
+  });
+
+  assert.equal(payload._meta.providerUsed, "hangve");
+  assert.deepEqual(calls, ["gianghuy", "vipomall", "hangve"]);
+});
+
 test("orchestrator dedupes concurrent requests for the same canonical URL", async () => {
   let calls = 0;
   const providers = {

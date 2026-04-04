@@ -3,6 +3,7 @@ const { isAbortError } = require("../core/errors");
 const { normalizeString } = require("../core/product");
 const { getIncompleteReasons, serializeBackendPayload } = require("../mappers/backend-payload");
 const { mapPandamallToCanonical } = require("../mappers/pandamall");
+const { getSourceLabelContractReasons } = require("./source-label-contract");
 const {
   getPandamallItemDetails,
   getPandamallItemDetailsNoAuth
@@ -43,7 +44,10 @@ function extractPandamallRaw(response) {
 
 function getPandamallCompleteness(canonical, getPayloadIncompleteReasons = getIncompleteReasons) {
   const payload = serializeBackendPayload(canonical);
-  return getPayloadIncompleteReasons(payload);
+  return [
+    ...getPayloadIncompleteReasons(payload),
+    ...getSourceLabelContractReasons(canonical, { marketplace: canonical?.sourceType }),
+  ];
 }
 
 function createPandamallProvider({

@@ -67,7 +67,9 @@ test("VipoMall mapper normalizes media urls and maps sku/value ids conservativel
   assert.equal(payload.skuProperty[0].sourcePropertyId, "144160005");
   assert.equal(payload.skuProperty[0].values[0].sourceValueId, "42730477369");
   assert.equal(payload.skuProperty[0].values[0].image, "https://img.alicdn.com/bao/uploaded/i4/example-color.jpg");
-  assert.equal(payload.sku[0].specAttrs, "Thẻ phụ cấp 1 năm");
+  assert.equal(payload.skuProperty[0].name, "专辑名称");
+  assert.equal(payload.skuProperty[0].values[0].name, "副卡一年（秒发新用户）");
+  assert.equal(payload.sku[0].specAttrs, "副卡一年（秒发新用户）");
   assert.equal(payload.rangePrices.length, 1);
   assert.equal(payload.rangePrices[0].price, 93.69);
 });
