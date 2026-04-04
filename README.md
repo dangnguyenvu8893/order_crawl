@@ -8,6 +8,23 @@ Service Node duy nhất để backend gửi 1 URL sản phẩm từ `1688`, `tao
 
 `POST /transform-product-from-url`
 
+`POST /track/17track`
+
+```json
+{
+  "trackingNumber": "78952381275889",
+  "phoneNumber": "0971037741"
+}
+```
+
+`POST /track/china`
+
+```json
+{
+  "trackingNumber": "78952381275889"
+}
+```
+
 ```json
 {
   "url": "https://detail.1688.com/offer/892407994374.html",
@@ -75,7 +92,9 @@ npm run test:providers
 npm start
 ```
 
-Service mặc định chạy ở `http://localhost:3000`.
+Chạy trực tiếp với `npm start`, service mặc định lắng nghe ở `http://localhost:3000`.
+
+Nếu chạy bằng `docker compose up -d --build`, crawler được publish ra host tại `http://localhost:5001`.
 
 `npm test` là suite unit/integration local không gọi network thật.
 
@@ -92,6 +111,15 @@ Các file hỗ trợ:
 - `config/hangve.accounts.json`
 - `config/pandamall.credentials.json`
 - `config/pandamall.accounts.json`
+- `config/tracking.credentials.json`
+
+Ví dụ tracking credentials:
+
+```json
+{
+  "phoneNumber": "0971037741"
+}
+```
 
 Ví dụ PandaMall:
 

@@ -2,6 +2,7 @@ const http = require("node:http");
 
 const { HttpError } = require("../core/errors");
 const { transformProductFromUrl } = require("../core/orchestrator");
+const { track17, trackChina } = require("../tracking");
 
 function sendJson(response, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -52,7 +53,23 @@ function readJsonBody(request) {
   });
 }
 
-function createServer({ transform = transformProductFromUrl } = {}) {
+function sendHandlerResult(response, result) {
+  if (!result || typeof result !== "object") {
+    sendJson(response, 200, result);
+    return;
+  }
+
+  const statusCode = Number.isInteger(result.statusCode) ? result.statusCode : 200;
+  const payload = Object.prototype.hasOwnProperty.call(result, "payload") ? result.payload : result;
+
+  sendJson(response, statusCode, payload);
+}
+
+function createServer({
+  track17Handler = track17,
+  trackChinaHandler = trackChina,
+  transform = transformProductFromUrl
+} = {}) {
   return http.createServer(async (request, response) => {
     try {
       if (request.url === "/health") {
@@ -82,6 +99,37 @@ function createServer({ transform = transformProductFromUrl } = {}) {
           debug: parseRequestBoolean(body.debug)
         });
         sendJson(response, 200, payload);
+        return;
+      }
+
+      if (request.url === "/track/17track") {
+        if (request.method !== "POST") {
+          sendJson(response, 405, { error: "method not allowed" });
+          return;
+        }
+
+        const body = await readJsonBody(request);
+        const result = await track17Handler({
+          phoneNumber: typeof body.phoneNumber === "string" ? body.phoneNumber : "",
+          trackingNumber: typeof body.trackingNumber === "string" ? body.trackingNumber : ""
+        });
+
+        sendHandlerResult(response, result);
+        return;
+      }
+
+      if (request.url === "/track/china") {
+        if (request.method !== "POST") {
+          sendJson(response, 405, { error: "method not allowed" });
+          return;
+        }
+
+        const body = await readJsonBody(request);
+        const result = await trackChinaHandler({
+          trackingNumber: typeof body.trackingNumber === "string" ? body.trackingNumber : ""
+        });
+
+        sendHandlerResult(response, result);
         return;
       }
 

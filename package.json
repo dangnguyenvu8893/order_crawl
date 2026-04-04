@@ -4,6 +4,10 @@
   "private": true,
   "description": "Single-endpoint Node crawler service for 1688, Taobao, and Tmall product transforms.",
   "type": "commonjs",
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "playwright-core": "^1.55.0"
+  },
   "scripts": {
     "start": "node src/server/index.js",
     "test": "node --test test/*.test.js",

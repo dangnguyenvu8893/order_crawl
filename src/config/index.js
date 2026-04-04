@@ -1,4 +1,5 @@
 const { loadOptionalJsonFile } = require("./files");
+const { loadTrackingCredentials } = require("./tracking");
 
 const ALLOWED_SOURCE_TYPES = Object.freeze(["1688", "taobao", "tmall"]);
 const PROVIDER_CHAINS = Object.freeze({
@@ -85,6 +86,10 @@ function buildProviderGuardSettings(prefix, defaults) {
 
 const SERVICE_PORT = toPositiveInt(process.env.PORT, 3000);
 const HANGVE_SESSION_TTL_MS = toPositiveInt(process.env.HANGVE_SESSION_TTL_MS, 10 * 60 * 1000);
+const TRACKING_TIMEOUT_MS = toPositiveInt(process.env.TRACKING_TIMEOUT_MS, 60 * 1000);
+const TRACKING_MAX_INFLIGHT = toPositiveInt(process.env.TRACKING_MAX_INFLIGHT, 2);
+const TRACKING_BROWSER_HEADLESS = toBoolean(process.env.TRACKING_BROWSER_HEADLESS, true);
+const TRACKING_BROWSER_EXECUTABLE_PATH = String(process.env.TRACKING_BROWSER_EXECUTABLE_PATH ?? "").trim();
 const ORCHESTRATOR_RESULT_CACHE_TTL_MS = toNonNegativeInt(
   process.env.CRAWL_RESULT_CACHE_TTL_MS,
   30 * 1000
@@ -156,6 +161,8 @@ const { data: hangveCredentials } = loadOptionalJsonFile("hangve.credentials.jso
 const { data: hangveAccountsRaw } = loadOptionalJsonFile("hangve.accounts.json");
 const { data: pandamallCredentials } = loadOptionalJsonFile("pandamall.credentials.json");
 const { data: pandamallAccountsRaw } = loadOptionalJsonFile("pandamall.accounts.json");
+const TRACKING_CREDENTIALS = Object.freeze(loadTrackingCredentials());
+const TRACKING_17TRACK_PHONE_NUMBER = TRACKING_CREDENTIALS.phoneNumber;
 
 const HANGVE_ACCOUNTS = Object.freeze(
   normalizeAccountEntries(hangveAccountsRaw, "username").length > 0
@@ -227,6 +234,11 @@ module.exports = {
   PROVIDER_START_DELAYS_MS,
   PROVIDER_TIMEOUTS_MS,
   SERVICE_PORT,
+  TRACKING_17TRACK_PHONE_NUMBER,
+  TRACKING_BROWSER_EXECUTABLE_PATH,
+  TRACKING_BROWSER_HEADLESS,
+  TRACKING_MAX_INFLIGHT,
+  TRACKING_TIMEOUT_MS,
   URL_RESOLVER_MAX_RESPONSE_BYTES,
   URL_RESOLVER_TIMEOUT_MS,
   getProviderAccounts,
