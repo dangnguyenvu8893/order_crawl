@@ -16,6 +16,14 @@ test("resolveDirectProductUrlCandidate unwraps nested product URLs from query pa
   assert.equal(resolved, "https://item.taobao.com/item.htm?id=1033960738640");
 });
 
+test("resolveDirectProductUrlCandidate canonicalizes intermediate marketplace hosts with item ids", () => {
+  const resolved = resolveDirectProductUrlCandidate(
+    "https://tmallx.tmall.com/app/tmallx-src/goods-detail-weex/goods_detail_tm?id=918125731542&sourceType=item"
+  );
+
+  assert.equal(resolved, "https://detail.tmall.com/item.htm?id=918125731542");
+});
+
 test("parseContentForProductUrl extracts desktop URLs from HTML fragments", () => {
   const html = `
     <html>
@@ -40,20 +48,14 @@ test("resolveProductUrlInput parses deep links embedded in text", async () => {
   assert.equal(resolved.extractedFromText, true);
 });
 
-test("resolveProductUrlInput parses HTML body when redirect URL is still a short domain", async () => {
-  let calls = 0;
+test("resolveProductUrlInput prioritizes desktop html parsing for ambiguous short hosts", async () => {
+  const calls = [];
   const resolved = await resolveProductUrlInput("https://e.tb.cn/h.randomShort", {
     fetchImpl: async (_url, options) => {
-      calls += 1;
-      if (options.method === "HEAD") {
-        return {
-          url: "https://e.tb.cn/h.randomShort",
-          body: null,
-          async text() {
-            return "";
-          }
-        };
-      }
+      calls.push({
+        method: options.method,
+        referer: options.headers?.referer
+      });
 
       return {
         url: "https://e.tb.cn/h.randomShort",
@@ -65,9 +67,14 @@ test("resolveProductUrlInput parses HTML body when redirect URL is still a short
     }
   });
 
-  assert.equal(calls, 2);
+  assert.deepEqual(calls, [
+    {
+      method: "GET",
+      referer: "https://www.taobao.com/"
+    }
+  ]);
   assert.equal(resolved.resolvedUrl, "https://detail.tmall.com/item.htm?id=950151754161");
-  assert.equal(resolved.method, "redirect_get_mobile_content");
+  assert.equal(resolved.method, "redirect_get_desktop_content");
 });
 
 test("resolveProductUrlInput rejects unsupported hosts after text extraction", async () => {

@@ -207,6 +207,24 @@ function inferMarketplaceFromValue(value, fallbackMarketplace = "") {
   }
 }
 
+function isMarketplaceFamilyHost(hostname) {
+  const normalizedHostname = normalizeHostname(hostname);
+
+  if (
+    DESKTOP_HOST_MARKETPLACE[normalizedHostname] ||
+    MOBILE_HOST_MARKETPLACE[normalizedHostname] ||
+    CLEAR_SHORT_HOST_MARKETPLACE[normalizedHostname]
+  ) {
+    return true;
+  }
+
+  return (
+    normalizedHostname.endsWith(".taobao.com") ||
+    normalizedHostname.endsWith(".tmall.com") ||
+    normalizedHostname.endsWith(".1688.com")
+  );
+}
+
 function getQueryParamIdCandidate(searchParams) {
   for (const key of QUERY_ID_KEYS) {
     const value = normalizeString(searchParams.get(key));
@@ -369,7 +387,7 @@ function resolveDirectProductUrlCandidate(
     return null;
   }
 
-  if (DESKTOP_HOST_MARKETPLACE[hostname] || MOBILE_HOST_MARKETPLACE[hostname] || CLEAR_SHORT_HOST_MARKETPLACE[hostname]) {
+  if (isMarketplaceFamilyHost(hostname)) {
     return buildDesktopProductUrl(inferredMarketplace, itemId);
   }
 
@@ -488,16 +506,24 @@ async function fetchWithResolutionBudget(
   });
 }
 
-async function readResponseTextLimited(response, maxBytes) {
+async function readResponseTextLimited(response, maxBytes, { sourceUrl = "" } = {}) {
+  const effectiveSourceUrl = response?.url || sourceUrl;
+
   if (!response?.body || typeof response.body.getReader !== "function") {
     const text = await response.text();
-    return text.length > maxBytes ? text.slice(0, maxBytes) : text;
+    const limitedText = text.length > maxBytes ? text.slice(0, maxBytes) : text;
+
+    return {
+      text: limitedText,
+      resolvedUrl: parseContentForProductUrl(limitedText, effectiveSourceUrl)
+    };
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let totalBytes = 0;
   let output = "";
+  let resolvedUrl = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -511,15 +537,50 @@ async function readResponseTextLimited(response, maxBytes) {
       if (allowedBytes > 0) {
         output += decoder.decode(value.subarray(0, allowedBytes), { stream: true });
       }
-      await reader.cancel();
+      resolvedUrl = parseContentForProductUrl(output, effectiveSourceUrl);
+      await reader.cancel().catch(() => {});
       break;
     }
 
     output += decoder.decode(value, { stream: true });
+
+    resolvedUrl = parseContentForProductUrl(output, effectiveSourceUrl);
+    if (resolvedUrl) {
+      await reader.cancel().catch(() => {});
+      break;
+    }
   }
 
   output += decoder.decode();
-  return output;
+  resolvedUrl ??= parseContentForProductUrl(output, effectiveSourceUrl);
+
+  return {
+    text: output,
+    resolvedUrl
+  };
+}
+
+function getResolutionAttempts(url) {
+  let hostname = "";
+
+  try {
+    hostname = normalizeHostname(new URL(url).hostname);
+  } catch {
+    hostname = "";
+  }
+
+  if (AMBIGUOUS_SHORT_HOSTS.has(hostname)) {
+    return [
+      { method: "GET", headers: DESKTOP_FETCH_HEADERS, methodName: "redirect_get_desktop", readBody: true },
+      { method: "GET", headers: MOBILE_FETCH_HEADERS, methodName: "redirect_get_mobile", readBody: true }
+    ];
+  }
+
+  return [
+    { method: "HEAD", headers: MOBILE_FETCH_HEADERS, methodName: "redirect_head", readBody: false },
+    { method: "GET", headers: MOBILE_FETCH_HEADERS, methodName: "redirect_get_mobile", readBody: true },
+    { method: "GET", headers: DESKTOP_FETCH_HEADERS, methodName: "redirect_get_desktop", readBody: true }
+  ];
 }
 
 async function resolveViaNetwork(
@@ -534,11 +595,7 @@ async function resolveViaNetwork(
   const deadlineAt = Date.now() + timeoutMs;
   let lastError = null;
 
-  for (const attempt of [
-    { method: "HEAD", headers: MOBILE_FETCH_HEADERS, methodName: "redirect_head", readBody: false },
-    { method: "GET", headers: MOBILE_FETCH_HEADERS, methodName: "redirect_get_mobile", readBody: true },
-    { method: "GET", headers: DESKTOP_FETCH_HEADERS, methodName: "redirect_get_desktop", readBody: true }
-  ]) {
+  for (const attempt of getResolutionAttempts(url)) {
     try {
       const response = await fetchWithResolutionBudget(url, {
         method: attempt.method,
@@ -562,8 +619,9 @@ async function resolveViaNetwork(
         continue;
       }
 
-      const body = await readResponseTextLimited(response, maxResponseBytes);
-      const resolvedFromContent = parseContentForProductUrl(body, response.url || url);
+      const { resolvedUrl: resolvedFromContent } = await readResponseTextLimited(response, maxResponseBytes, {
+        sourceUrl: url
+      });
       if (resolvedFromContent) {
         return {
           resolvedUrl: resolvedFromContent,
