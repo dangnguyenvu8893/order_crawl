@@ -64,6 +64,18 @@ test("GET /health returns ok", async () => {
   });
 });
 
+test("GET /health echoes X-Request-Id header", async () => {
+  await withServer(async () => ({}), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/health`, {
+      headers: {
+        "x-request-id": "req-xyz"
+      }
+    });
+
+    assert.equal(response.headers.get("x-request-id"), "req-xyz");
+  });
+});
+
 test("POST /transform-product-from-url returns transformed payload", async () => {
   const providers = {
     gianghuy: { async resolveProduct() { throw new Error("gianghuy failed"); } },

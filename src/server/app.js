@@ -3,6 +3,7 @@ const http = require("node:http");
 const { HttpError } = require("../core/errors");
 const { transformProductFromUrl } = require("../core/orchestrator");
 const { track17, trackChina } = require("../tracking");
+const logger = require("./logger");
 
 function sendJson(response, statusCode, payload) {
   const body = JSON.stringify(payload);
@@ -71,6 +72,32 @@ function createServer({
   transform = transformProductFromUrl
 } = {}) {
   return http.createServer(async (request, response) => {
+    const requestContext = logger.createRequestContext(request);
+    const startedAt = process.hrtime.bigint();
+
+    request.requestContext = requestContext;
+    response.setHeader("X-Request-Id", requestContext.requestId);
+
+    response.on("finish", () => {
+      const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+
+      logger.info("Crawler request completed", {
+        clientApp: requestContext.clientApp,
+        clientScreen: requestContext.clientScreen,
+        durationMs: Number(durationMs.toFixed(2)),
+        forwardedFor: requestContext.forwardedFor,
+        ip: requestContext.ip,
+        method: requestContext.method,
+        origin: requestContext.origin,
+        path: requestContext.path,
+        referer: requestContext.referer,
+        remoteAddress: requestContext.remoteAddress,
+        requestId: requestContext.requestId,
+        statusCode: response.statusCode,
+        userAgent: requestContext.userAgent
+      });
+    });
+
     try {
       if (request.url === "/health") {
         if (request.method !== "GET") {
@@ -96,7 +123,8 @@ function createServer({
         }
 
         const payload = await transform(url, {
-          debug: parseRequestBoolean(body.debug)
+          debug: parseRequestBoolean(body.debug),
+          requestId: requestContext.requestId
         });
         sendJson(response, 200, payload);
         return;
@@ -143,6 +171,14 @@ function createServer({
       if (error instanceof HttpError && error.details) {
         payload._meta = error.details;
       }
+
+      logger.error("Crawler request failed", {
+        error,
+        method: requestContext.method,
+        path: requestContext.path,
+        requestId: requestContext.requestId,
+        statusCode
+      });
 
       sendJson(response, statusCode, payload);
     }
